@@ -51,7 +51,7 @@ class PolicyRAGService:
         # 2. Chunk policies into retrieval units preserving full provenance metadata
         chunks = PolicyChunkingService.chunk_all_policies(policies)
 
-        # 3. Generate embeddings using local SentenceTransformer
+        # 3. Generate embeddings using hosted Gemini embeddings
         texts_to_embed = [c["content"] for c in chunks]
         embeddings = PolicyEmbeddingService.embed_batch(texts_to_embed)
         model_name = PolicyEmbeddingService.get_model_name()
@@ -95,7 +95,7 @@ class PolicyRAGService:
             logger.info("FAISS policy index missing or outdated. Automatically rebuilding index...")
             cls.rebuild_index(db)
 
-        # 1. Embed query using local SentenceTransformer
+        # 1. Embed query using hosted Gemini embeddings
         query_vec = PolicyEmbeddingService.embed_text(query)
 
         # 2. Vector search candidate pool

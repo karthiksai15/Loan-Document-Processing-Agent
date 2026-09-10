@@ -3,7 +3,7 @@ Unit and Integration Tests for Phase 14 — Policy RAG
 
 Verifies:
 1. Policy chunking & 100% provenance preservation from Phase 13 policies.
-2. Local SentenceTransformer embedding generation.
+2. Hosted Gemini embedding generation.
 3. FAISS index building, persistence, loading, rebuilding.
 4. Semantic policy retrieval, Top-K ranking, similarity scoring.
 5. Metadata filtering (source, is_simulated, authority, policy_type, category, policy_id).
@@ -78,10 +78,10 @@ def test_policy_chunking_metadata_preservation():
         assert c["source_authority"] == c["authority"]
 
 
-# ── TEST 2: Local SentenceTransformer Embedding Generation ───────────────────
+# ── TEST 2: Hosted Gemini Embedding Generation ─────────────────────────────
 
 def test_embedding_generation():
-    """Test local SentenceTransformers embedding generation."""
+    """Test hosted Gemini embedding generation."""
     text = "Officially Valid Documents for customer identification"
     vec = PolicyEmbeddingService.embed_text(text)
     dim = PolicyEmbeddingService.get_embedding_dimension()

@@ -16,11 +16,7 @@ COPY backend/requirements.txt requirements.txt
 RUN pip install --no-cache-dir --default-timeout=1000 \
     "psycopg2-binary>=2.9.9"
 
-# Install CPU-only PyTorch wheel
-RUN pip install --no-cache-dir --default-timeout=1000 \
-    torch --extra-index-url https://download.pytorch.org/whl/cpu
-
-# Install remaining application dependencies
+# Install application dependencies
 RUN pip install --no-cache-dir --default-timeout=1000 \
     -r requirements.txt
 

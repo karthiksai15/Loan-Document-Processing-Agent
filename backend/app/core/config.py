@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     ALLOWED_DOCUMENT_TYPES: list[str] = ["PAYSLIP", "BANK_STATEMENT", "TAX_RETURN", "KYC", "OTHER"]
     
     # Policy RAG Settings (Phase 14)
-    POLICY_EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+    POLICY_EMBEDDING_MODEL: str = "gemini-embedding-2"
     VECTOR_STORE_DIR: str = os.path.join(_find_default_data_dir(), "vector_store")
     POLICY_CHUNK_SIZE: int = 500
     POLICY_CHUNK_OVERLAP: int = 50
