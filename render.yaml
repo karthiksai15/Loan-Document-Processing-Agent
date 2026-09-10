@@ -16,7 +16,6 @@ services:
     dockerfilePath: ./backend/Dockerfile
     healthCheckPath: /health
     autoDeployTrigger: commit
-    autoDeploy: true
 
     envVars:
       # Database Configuration (External Neon PostgreSQL)
