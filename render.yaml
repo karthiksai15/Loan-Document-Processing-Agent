@@ -1,0 +1,59 @@
+# ==============================================================================
+# Render Blueprint Specification
+# Project: Loan Document Processing Agent
+# Repository: https://github.com/karthiksai15/Loan-Document-Processing-Agent
+# ==============================================================================
+
+services:
+  - type: web
+    name: loan-document-processing-backend
+    runtime: docker
+    repo: https://github.com/karthiksai15/Loan-Document-Processing-Agent
+    branch: main
+    plan: free
+    region: singapore
+    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    autoDeploy: true
+
+    envVars:
+      # Database Configuration (External Neon PostgreSQL)
+      # Enter your Neon connection string in the Render Dashboard when prompted
+      - key: DATABASE_URL
+        sync: false
+
+      # Primary LLM Provider Configuration
+      - key: LLM_PROVIDER
+        value: gemini
+
+      # Google Gemini API Key (Secret — enter in Render Dashboard when prompted)
+      - key: GEMINI_API_KEY
+        sync: false
+
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+
+      # Groq LLM Provider Configuration (Optional alternative provider)
+      - key: GROQ_API_KEY
+        sync: false
+
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-20b
+
+      - key: GROQ_BASE_URL
+        value: https://api.groq.com/openai/v1
+
+      # CORS Configuration
+      # Defaults to "*" for initial setup; update to your Vercel URL after frontend deploy
+      - key: CORS_ORIGINS
+        value: "*"
+
+      # Python Runtime Configuration
+      - key: PYTHONUNBUFFERED
+        value: "1"
+
+      # Bundled Demo & Policy Data Path inside Container
+      - key: DATA_DIR
+        value: /app/data

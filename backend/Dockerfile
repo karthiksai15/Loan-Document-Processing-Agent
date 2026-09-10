@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python dependencies
-COPY requirements.txt .
+COPY backend/requirements.txt requirements.txt
 
 # PostgreSQL driver
 RUN pip install --no-cache-dir --default-timeout=1000 \
@@ -24,8 +24,9 @@ RUN pip install --no-cache-dir --default-timeout=1000 \
 RUN pip install --no-cache-dir --default-timeout=1000 \
     -r requirements.txt
 
-# Copy application
-COPY . .
+# Copy application and bundled demo/policy data
+COPY backend/ .
+COPY data/ ./data/
 
 EXPOSE 8000
 
