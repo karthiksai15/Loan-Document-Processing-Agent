@@ -1,0 +1,80 @@
+@import './variables.css';
+
+/* CSS Reset & Base Elements */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-app);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Accessible focus ring */
+:focus-visible {
+  outline: 2px solid var(--color-primary-600);
+  outline-offset: 2px;
+}
+
+/* Typography Hierarchy */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+h1 { font-size: 1.5rem; }
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1.1rem; }
+h4 { font-size: 0.95rem; }
+
+p {
+  color: var(--color-text-secondary);
+}
+
+a {
+  color: var(--color-primary-600);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code, pre {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-subtle);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}

@@ -1,0 +1,11 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+PAYSLIP
+
+Employee Name: Arjun Verma
+Employer: Prime Analytics Pvt Ltd
+Employee ID: DEMO-A007
+Pay Period: August 2026
+Employment Status: Yes
+Monthly Gross Salary: INR 192,000
+Monthly Net Salary: INR 168,960
+Annual Declared Income: INR 2,300,000

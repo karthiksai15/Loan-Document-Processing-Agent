@@ -1,0 +1,11 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+PAYSLIP
+
+Employee Name: Vikram Patel
+Employer: Crest Digital Pvt Ltd
+Employee ID: DEMO-A005
+Pay Period: August 2026
+Employment Status: No
+Monthly Gross Salary: INR 896,000
+Monthly Net Salary: INR 788,480
+Annual Declared Income: INR 8,400,000

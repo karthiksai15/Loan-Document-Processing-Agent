@@ -1,0 +1,8 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+KYC / IDENTITY DOCUMENT
+
+Full Name: Ananya Iyer
+Date of Birth: 1988-04-13
+Synthetic ID Number: DEMO-KYC-A004
+Address: 13, Demo Residency, Bengaluru, Karnataka
+Document Type: Identity and Address Proof

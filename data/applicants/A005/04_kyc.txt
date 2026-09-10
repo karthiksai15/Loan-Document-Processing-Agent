@@ -1,0 +1,8 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+KYC / IDENTITY DOCUMENT
+
+Full Name: Vikram Patel
+Date of Birth: 1989-05-14
+Synthetic ID Number: DEMO-KYC-A005
+Address: 14, Demo Residency, Bengaluru, Karnataka
+Document Type: Identity and Address Proof

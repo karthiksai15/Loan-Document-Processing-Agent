@@ -1,0 +1,11 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+PAYSLIP
+
+Employee Name: Ishita Rao
+Employer: Zenith Technologies
+Employee ID: DEMO-A008
+Pay Period: August 2026
+Employment Status: No
+Monthly Gross Salary: INR 790,000
+Monthly Net Salary: INR 695,200
+Annual Declared Income: INR 7,400,000

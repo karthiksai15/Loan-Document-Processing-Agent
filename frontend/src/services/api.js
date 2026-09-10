@@ -1,0 +1,103 @@
+import axios from 'axios';
+
+const API_BASE = '/api/v1';
+
+const apiClient = axios.create({
+  baseURL: API_BASE,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 30000,
+});
+
+// Response interceptor for unified error message extraction
+apiClient.interceptors.response.use(
+  (response) => response.data,
+  (error) => {
+    const message =
+      error.response?.data?.detail ||
+      error.response?.data?.message ||
+      error.message ||
+      'An unexpected network error occurred';
+    return Promise.reject(new Error(message));
+  }
+);
+
+export const api = {
+  // System Health & Info
+  getSystemHealth: () => apiClient.get('/health'),
+  getSystemInfo: () => apiClient.get('/system/info'),
+
+  // Dashboard & Application listing
+  getDashboardOverview: () => apiClient.get('/applications/dashboard/overview'),
+  seedDemoData: () => apiClient.post('/applications/seed-demo-data'),
+  getApplications: () => apiClient.get('/applications'),
+  getApplication: (appId) => apiClient.get(`/applications/${appId}`),
+
+  // Verification & Evidence Graph
+  getVerification: (appId) => apiClient.get(`/applications/${appId}/verification`),
+  verifyApplication: (appId) => apiClient.post(`/applications/${appId}/verify`),
+  getEvidence: (appId) => apiClient.get(`/applications/${appId}/evidence`),
+  buildEvidence: (appId) => apiClient.post(`/applications/${appId}/evidence`),
+
+  // ML Risk & Review Score
+  predictRisk: (appId) => apiClient.post(`/applications/${appId}/risk/predict`),
+  getReviewScore: (appId) => apiClient.get(`/applications/${appId}/review-score`),
+  calculateReviewScore: (appId) => apiClient.post(`/applications/${appId}/review-score`),
+
+  // Documents
+  listDocuments: (appId) => apiClient.get(`/applications/${appId}/documents`),
+  getDocumentText: (docId) => apiClient.get(`/documents/${docId}/text`),
+  getDocumentFields: (docId) => apiClient.get(`/documents/${docId}/extracted-fields`),
+  getDocumentValidation: (docId) => apiClient.get(`/documents/${docId}/validation`),
+  getDocumentDownloadUrl: (docId) => `/api/v1/documents/${docId}/download`,
+
+  // AI Review Agent (LangGraph)
+  runAgentReview: (appId, forceRebuild = false) =>
+    apiClient.post(`/applications/${appId}/agent/review`, { force_rebuild: forceRebuild }),
+  getAgentReview: (appId) => apiClient.get(`/applications/${appId}/agent/review`),
+  getAgentTrace: (appId) => apiClient.get(`/applications/${appId}/agent/trace`),
+
+  // Confidence & Human Review Gate
+  getHumanReview: (appId) => apiClient.get(`/applications/${appId}/human-review`),
+  evaluateHumanReview: (appId) => apiClient.post(`/applications/${appId}/human-review`),
+  acknowledgeReview: (appId, officerId = 'loan_officer_001') =>
+    apiClient.post(`/applications/${appId}/human-review/acknowledge`, { officer_id: officerId }),
+  addOfficerNote: (appId, officerId, note) =>
+    apiClient.post(`/applications/${appId}/human-review/note`, { officer_id: officerId, note }),
+  requestDocuments: (appId, officerId, documents, reason) =>
+    apiClient.post(`/applications/${appId}/human-review/request-documents`, {
+      officer_id: officerId,
+      documents,
+      reason,
+    }),
+  recordHumanDecision: (appId, { officerId, decision, decisionReason, overrideReason, notes }) =>
+    apiClient.post(`/applications/${appId}/human-review/decision`, {
+      officer_id: officerId,
+      decision,
+      decision_reason: decisionReason,
+      override_reason: overrideReason,
+      notes,
+    }),
+  getHumanReviewAudit: (appId) => apiClient.get(`/applications/${appId}/human-review/audit`),
+
+  // Decision History & Feedback
+  getDecisionHistory: (appId) => apiClient.get(`/applications/${appId}/decision-history`),
+  submitFeedback: (appId, { officerId, feedback, category }) =>
+    apiClient.post(`/applications/${appId}/feedback`, {
+      officer_id: officerId,
+      feedback,
+      category,
+    }),
+
+  // Policies (RAG Knowledge Base)
+  listPolicies: (params = {}) => apiClient.get('/policies', { params }),
+  searchPolicies: (query, options = {}) =>
+    apiClient.post('/policies/search', {
+      query,
+      top_k: options.topK || 5,
+      filter_authority: options.authority || null,
+      filter_policy_type: options.policyType || null,
+      filter_category: options.category || null,
+    }),
+};

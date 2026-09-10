@@ -1,0 +1,8 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+INCOME TAX RETURN
+
+Taxpayer Name: Aarav Sharma
+Tax Year: FY 2025-26
+Declared Annual Income: INR 300,000
+Taxable Income: INR 270,000
+Tax Paid: INR 30,000

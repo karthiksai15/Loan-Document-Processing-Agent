@@ -1,0 +1,8 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+KYC / IDENTITY DOCUMENT
+
+Full Name: Rahul Gupta
+Date of Birth: 1993-09-18
+Synthetic ID Number: DEMO-KYC-A009
+Address: 18, Demo Residency, Bengaluru, Karnataka
+Document Type: Identity and Address Proof

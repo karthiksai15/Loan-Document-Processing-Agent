@@ -1,0 +1,11 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+PAYSLIP
+
+Employee Name: Diya Reddy
+Employer: BlueSky Solutions Pvt Ltd
+Employee ID: DEMO-A002
+Pay Period: August 2026
+Employment Status: Yes
+Monthly Gross Salary: INR 325,000
+Monthly Net Salary: INR 286,000
+Annual Declared Income: INR 3,900,000

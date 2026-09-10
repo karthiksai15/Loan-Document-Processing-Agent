@@ -1,0 +1,11 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+PAYSLIP
+
+Employee Name: Meera Nair
+Employer: Orbit Consulting India
+Employee ID: DEMO-A006
+Pay Period: August 2026
+Employment Status: Yes
+Monthly Gross Salary: INR 767,000
+Monthly Net Salary: INR 674,960
+Annual Declared Income: INR 9,200,000

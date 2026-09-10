@@ -1,0 +1,29 @@
+{
+  "champion_model_name": "RandomForest",
+  "model_version": "v1",
+  "feature_version": "v1",
+  "target_definition": "historical_rejection_outcome",
+  "cv_roc_auc": 0.9999908800729594,
+  "test_roc_auc": 0.9999941695381691,
+  "test_accuracy": 0.9988290398126464,
+  "test_f1": 0.9984496124031008,
+  "risk_thresholds": {
+    "LOW": 0.35,
+    "MEDIUM_UPPER": 0.65,
+    "HIGH": 0.65
+  },
+  "feature_columns": [
+    "no_of_dependents",
+    "education",
+    "self_employed",
+    "income_annum",
+    "loan_amount",
+    "loan_term",
+    "cibil_score",
+    "residential_assets_value",
+    "commercial_assets_value",
+    "luxury_assets_value",
+    "bank_asset_value"
+  ],
+  "generated_at": "2026-09-08 17:52:46.360702"
+}

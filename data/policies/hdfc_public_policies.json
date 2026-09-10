@@ -1,0 +1,34 @@
+[
+  {
+    "policy_id": "POL_HDFC_PUB_DOCS_001",
+    "source": "HDFC_BANK",
+    "title": "HDFC Bank Personal Loan — Public Documentation Checklist for Salaried Applicants",
+    "category": "DOCUMENTATION",
+    "section": "Personal Loan Eligibility & Documents — Required Documents for Salaried Individuals",
+    "rule": "HDFC_PUB_DOC_CHECKLIST",
+    "description": "Public documentation checklist published by HDFC Bank specifying required documents for non-pre-approved salaried applicants.",
+    "text": "Under HDFC Bank's publicly published personal loan checklist, salaried applicants applying through standard (non-pre-approved) channels are typically required to submit: 1) Identity Proof (Aadhaar Card, Passport, Voter ID, Driving Licence, or PAN Card); 2) Address Proof; 3) Income Proof (latest 3 months salary slips or latest Form 16); and 4) Bank Statements for the latest 3–6 months reflecting regular salary credits. Pre-approved existing customers may be eligible for digital processing with no physical documentation required.",
+    "applicability": "Salaried personal loan applicants applying via standard retail channels",
+    "is_simulated": false,
+    "authority": "HDFC_BANK",
+    "reference_code": "HDFC-PL-DOCS-PUBLIC-2025",
+    "official_url": "https://www.hdfcbank.com/personal/borrow/popular-loans/personal-loan/eligibility-and-documents",
+    "version": "2025-01-01"
+  },
+  {
+    "policy_id": "POL_HDFC_PUB_CREDITWORTHINESS_003",
+    "source": "HDFC_BANK",
+    "title": "HDFC Bank Personal Loan — Public Credit Score & Repayment Guidance",
+    "category": "CREDIT_ASSESSMENT",
+    "section": "Personal Loan Guidance — Credit Score & Eligibility Overview",
+    "rule": "HDFC_PUB_CREDIT_SCORE_GUIDANCE",
+    "description": "Public guidance published by HDFC Bank regarding the role of credit score (CIBIL), repayment track record, and credit utilization for loan eligibility.",
+    "text": "HDFC Bank publicly advises personal loan applicants that credit score (CIBIL) and past credit history are key factors in evaluating creditworthiness. Applicants with higher credit scores (typically 720–750 and above) have higher approval probability and may secure favorable loan terms. The bank emphasizes maintaining a consistent track record of on-time EMI and credit card payments, keeping credit card utilization low (ideally under 30%), and avoiding multiple concurrent loan applications.",
+    "applicability": "All retail personal loan applicants",
+    "is_simulated": false,
+    "authority": "HDFC_BANK",
+    "reference_code": "HDFC-PL-CREDIT-GUIDE-PUBLIC",
+    "official_url": "https://www.hdfcbank.com/personal/borrow/popular-loans/personal-loan",
+    "version": "2025-01-01"
+  }
+]

@@ -1,0 +1,11 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+PAYSLIP
+
+Employee Name: Rahul Gupta
+Employer: UrbanEdge Services
+Employee ID: DEMO-A009
+Pay Period: August 2026
+Employment Status: No
+Monthly Gross Salary: INR 550,000
+Monthly Net Salary: INR 484,000
+Annual Declared Income: INR 6,600,000

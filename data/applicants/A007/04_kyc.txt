@@ -1,0 +1,8 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+KYC / IDENTITY DOCUMENT
+
+Full Name: Arjun Verma
+Date of Birth: 1991-07-16
+Synthetic ID Number: DEMO-KYC-A007
+Address: 16, Demo Residency, Bengaluru, Karnataka
+Document Type: Identity and Address Proof

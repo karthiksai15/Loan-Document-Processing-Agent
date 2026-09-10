@@ -1,0 +1,14 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+BANK STATEMENT
+
+Account Holder: Rohan Kumar
+Account Number: XXXX-DEMO-A003
+Statement Period: 01-Aug-2026 to 31-Aug-2026
+Opening Balance: INR 130,000
+
+05-Aug-2026 | SALARY CREDIT | INR 392,000
+15-Aug-2026 | UTILITY PAYMENT | INR 8,500
+22-Aug-2026 | TRANSFER | INR 25,000
+
+Average Balance: INR 130,000
+Closing Balance: INR 162,500

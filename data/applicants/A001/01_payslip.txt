@@ -1,0 +1,11 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+PAYSLIP
+
+Employee Name: Aarav Sharma
+Employer: Apex Technologies Pvt Ltd
+Employee ID: DEMO-A001
+Pay Period: August 2026
+Employment Status: No
+Monthly Gross Salary: INR 25,000
+Monthly Net Salary: INR 22,000
+Annual Declared Income: INR 300,000

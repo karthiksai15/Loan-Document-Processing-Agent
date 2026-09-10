@@ -1,0 +1,8 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+KYC / IDENTITY DOCUMENT
+
+Full Name: Diya Reddy
+Date of Birth: 1986-02-11
+Synthetic ID Number: DEMO-KYC-A002
+Address: 11, Demo Residency, Bengaluru, Karnataka
+Document Type: Identity and Address Proof

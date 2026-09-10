@@ -1,0 +1,8 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+KYC / IDENTITY DOCUMENT
+
+Full Name: Aarav Sharma
+Date of Birth: 1985-01-10
+Synthetic ID Number: DEMO-KYC-A001
+Address: 10, Demo Residency, Bengaluru, Karnataka
+Document Type: Identity and Address Proof

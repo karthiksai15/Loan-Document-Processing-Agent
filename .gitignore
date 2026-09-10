@@ -1,0 +1,67 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# =========================
+# Virtual Environment
+# =========================
+venv/
+.venv/
+env/
+
+# =========================
+# Environment / Secrets
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Node / React
+# =========================
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# =========================
+# Local databases
+# =========================
+*.db
+*.sqlite
+*.sqlite3
+loan_agent.db
+
+# =========================
+# Runtime / Logs
+# =========================
+*.log
+logs/
+
+# =========================
+# Generated document data
+# =========================
+data/uploads/
+data/extracted_text/
+
+# =========================
+# OS
+# =========================
+.DS_Store
+
+# =========================
+# IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp

@@ -1,0 +1,8 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+KYC / IDENTITY DOCUMENT
+
+Full Name: Rohan Kumar
+Date of Birth: 1987-03-12
+Synthetic ID Number: DEMO-KYC-A003
+Address: 12, Demo Residency, Bengaluru, Karnataka
+Document Type: Identity and Address Proof

@@ -1,0 +1,11 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+PAYSLIP
+
+Employee Name: Rohan Kumar
+Employer: Vertex Systems India
+Employee ID: DEMO-A003
+Pay Period: August 2026
+Employment Status: No
+Monthly Gross Salary: INR 392,000
+Monthly Net Salary: INR 344,960
+Annual Declared Income: INR 4,700,000

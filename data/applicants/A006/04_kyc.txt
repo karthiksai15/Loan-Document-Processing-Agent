@@ -1,0 +1,8 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+KYC / IDENTITY DOCUMENT
+
+Full Name: Kiran Mismatch
+Date of Birth: 1990-06-15
+Synthetic ID Number: DEMO-KYC-A006
+Address: 15, Demo Residency, Bengaluru, Karnataka
+Document Type: Identity and Address Proof

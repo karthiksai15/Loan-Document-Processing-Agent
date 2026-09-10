@@ -1,0 +1,11 @@
+SYNTHETIC LOAN DOCUMENT — DEMO ONLY
+PAYSLIP
+
+Employee Name: Nisha Menon
+Employer: Summit Enterprises
+Employee ID: DEMO-A010
+Pay Period: August 2026
+Employment Status: Yes
+Monthly Gross Salary: INR 17,000
+Monthly Net Salary: INR 14,960
+Annual Declared Income: INR 200,000
