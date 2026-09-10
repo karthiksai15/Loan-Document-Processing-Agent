@@ -164,16 +164,40 @@ def seed_demo_data_endpoint(db: Session = Depends(get_db)):
     for app_id in demo_ids:
         app_dir = os.path.join(settings.DATA_DIR, "applicants", app_id)
 
+        profiles_path = os.path.join(settings.DATA_DIR, "processed", "applicant_profiles.csv")
+        applicant_name = f"Applicant {app_id}"
+        loan_amount = 1000000.0
+        income_annum = 500000.0
+        if os.path.exists(profiles_path):
+            try:
+                import pandas as pd
+                df = pd.read_csv(profiles_path)
+                row = df[df["applicant_id"].astype(str).str.upper() == app_id.upper()]
+                if not row.empty:
+                    r = row.iloc[0]
+                    if pd.notna(r.get("applicant_name")):
+                        applicant_name = str(r["applicant_name"])
+                    if pd.notna(r.get("loan_amount")):
+                        loan_amount = float(r["loan_amount"])
+                    if pd.notna(r.get("income_annum")):
+                        income_annum = float(r["income_annum"])
+            except Exception as e:
+                logger.warning(f"Error reading profile for {app_id}: {e}")
+
         app_obj = application_service.get_application(db, app_id)
         if not app_obj:
             app_obj = application_service.create_application(
                 db,
                 ApplicationCreate(
                     application_id=app_id,
-                    applicant_name=f"Applicant {app_id}",
-                    loan_amount=1000000.0,
+                    applicant_name=applicant_name,
+                    loan_amount=loan_amount,
                 )
             )
+        else:
+            app_obj.applicant_name = applicant_name
+            app_obj.loan_amount = loan_amount
+            db.commit()
 
         try:
             profile = get_application_profile_data(db, app_id)
@@ -214,12 +238,22 @@ def seed_demo_data_endpoint(db: Session = Depends(get_db)):
 
         try:
             cross_document_verification_service.verify_and_save_application(db, app_id)
+            evidence_graph_service.build_evidence_graph_for_application(db, app_id)
             predict_application_risk(app_id, profile)
             review_score_service.compute_and_save_review_assessment(db, app_id)
             human_review_service.evaluate_human_review_gate(app_id, db=db, force_rebuild=True)
             seeded.append(app_id)
         except Exception as e:
             logger.warning(f"Error processing pipeline for {app_id}: {e}")
+
+    # Ensure baseline AI review exists for reference demo application A001
+    try:
+        from app.agent import agent_service
+        existing_rev = agent_service.get_agent_review(db, "A001")
+        if not existing_rev:
+            agent_service.run_agent_review(db, "A001", force_rebuild=True)
+    except Exception as ex:
+        logger.warning(f"Note on initial agent review: {ex}")
 
     return {"message": "Demo data seeding complete", "seeded_applications": seeded}
 

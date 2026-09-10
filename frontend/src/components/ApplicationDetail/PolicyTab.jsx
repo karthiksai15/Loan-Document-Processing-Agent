@@ -38,7 +38,7 @@ export function PolicyTab({ agentReview }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
           <Search size={18} color="var(--color-primary-600)" />
           <h4 style={{ fontSize: '0.95rem', fontWeight: 600 }}>
-            Semantic Policy Search (FAISS RAG)
+            Semantic Policy Search (Policy Knowledge Base)
           </h4>
         </div>
         <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginBottom: '0.875rem' }}>
@@ -64,7 +64,7 @@ export function PolicyTab({ agentReview }) {
         {searchResults && (
           <div style={{ marginTop: '1.25rem' }}>
             <h5 style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-              Search Results ({searchResults.length} matches retrieved from vector store)
+              Search Results ({searchResults.length} matches retrieved from Policy Knowledge Base)
             </h5>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {searchResults.map((res, i) => (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -15,7 +15,24 @@ export function TopBar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [seeding, setSeeding] = useState(false);
   const [seedSuccess, setSeedSuccess] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const navigate = useNavigate();
+
+  const fetchPending = async () => {
+    try {
+      const data = await api.getDashboardOverview();
+      setPendingCount(data.review_required_count || 0);
+    } catch {
+      // ignore in header
+    }
+  };
+
+  useEffect(() => {
+    fetchPending();
+    const handleSeeded = () => fetchPending();
+    window.addEventListener('loan-data-seeded', handleSeeded);
+    return () => window.removeEventListener('loan-data-seeded', handleSeeded);
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -37,8 +54,9 @@ export function TopBar() {
       setSeedSuccess(true);
       setTimeout(() => setSeedSuccess(false), 4000);
       window.dispatchEvent(new CustomEvent('loan-data-seeded'));
+      fetchPending();
     } catch (err) {
-      alert(`Seeding failed: ${err.message}`);
+      alert(`Loading demo data failed: ${err.message}`);
     } finally {
       setSeeding(false);
     }
@@ -87,37 +105,37 @@ export function TopBar() {
 
       {/* Actions, Notifications & Officer Profile */}
       <div className="genbank-topbar-right">
-        {/* Optional Data Seeder Tool */}
+        {/* Demo Data Loader Tool */}
         <button
           type="button"
           className="btn btn-secondary btn-sm"
           onClick={handleSeedData}
           disabled={seeding}
-          title="Seed demo applications A001–A010"
+          title="Load demo applications A001–A010"
           style={{ height: '34px', fontSize: '0.75rem', padding: '0 0.65rem' }}
         >
           {seeding ? (
             <>
               <Sparkles size={13} className="animate-spin" />
-              <span>Seeding...</span>
+              <span>Loading Demo Data...</span>
             </>
           ) : seedSuccess ? (
             <>
               <Check size={13} color="#15803d" />
-              <span style={{ color: '#15803d', fontWeight: 600 }}>Seeded</span>
+              <span style={{ color: '#15803d', fontWeight: 600 }}>Demo Data Loaded</span>
             </>
           ) : (
             <>
               <Database size={13} />
-              <span>Load Data</span>
+              <span>Load Demo Data</span>
             </>
           )}
         </button>
 
         {/* Notifications Icon with Badge */}
-        <div className="genbank-bell-wrap" title="3 pending items require underwriter action">
+        <div className="genbank-bell-wrap" title={pendingCount > 0 ? `${pendingCount} applications require review` : "No pending alerts"}>
           <Bell size={19} color="#475569" />
-          <span className="genbank-bell-badge">3</span>
+          {pendingCount > 0 && <span className="genbank-bell-badge">{pendingCount}</span>}
         </div>
 
         {/* Loan Officer Profile Pill */}

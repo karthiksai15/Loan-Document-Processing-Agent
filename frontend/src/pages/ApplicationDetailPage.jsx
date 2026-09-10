@@ -447,14 +447,14 @@ export function ApplicationDetailPage() {
             <div className="summary-metric-box">
               <div>
                 <div className="summary-metric-title">
-                  <span>Risk Score</span>
-                  <HelpCircle size={13} color="var(--color-text-muted)" title="Historical rejection-risk indicator based on ML risk predictor" />
+                  <span>ML Risk Score</span>
+                  <HelpCircle size={13} color="var(--color-text-muted)" title="Statistical ML model estimation of historical rejection risk" />
                 </div>
                 <div className="summary-metric-num">
                   {formatPercent(mlRiskScore)}
                 </div>
                 <div className="summary-metric-subtext">
-                  Historical rejection risk indicator
+                  Statistical model rejection risk
                 </div>
               </div>
               <span className={`badge ${mlLevel === 'LOW' ? 'badge-low' : mlLevel === 'MEDIUM' ? 'badge-medium' : 'badge-high'}`} style={{ width: 'fit-content', fontSize: '0.725rem' }}>
@@ -466,8 +466,8 @@ export function ApplicationDetailPage() {
             <div className="summary-metric-box" style={{ borderLeft: '1px solid var(--color-border)', borderRight: '1px solid var(--color-border)', paddingLeft: '0.75rem', paddingRight: '0.75rem' }}>
               <div>
                 <div className="summary-metric-title">
-                  <span>Evidence Quality</span>
-                  <HelpCircle size={13} color="var(--color-text-muted)" title="Document completeness and cross-document field consistency" />
+                  <span>Evidence Trust Score</span>
+                  <HelpCircle size={13} color="var(--color-text-muted)" title="Document completeness and cross-document field consistency (0-100)" />
                 </div>
                 <div className="summary-metric-num">
                   {Math.round(evidenceTrustScore)}
@@ -476,7 +476,7 @@ export function ApplicationDetailPage() {
                   out of 100
                 </div>
                 <div className="summary-metric-subtext">
-                  Document completeness and consistency
+                  Completeness & consistency
                 </div>
               </div>
               <span className={`badge ${evidenceLevel === 'HIGH' ? 'badge-low' : evidenceLevel === 'MEDIUM' ? 'badge-medium' : 'badge-high'}`} style={{ width: 'fit-content', fontSize: '0.725rem' }}>
@@ -489,7 +489,7 @@ export function ApplicationDetailPage() {
               <div>
                 <div className="summary-metric-title">
                   <span>Review Priority</span>
-                  <HelpCircle size={13} color="var(--color-text-muted)" title="Urgency ranking for human underwriter action" />
+                  <HelpCircle size={13} color="var(--color-text-muted)" title="Operational urgency ranking for underwriter attention (0-100)" />
                 </div>
                 <div className="summary-metric-num">
                   {priorityScore}
@@ -498,7 +498,7 @@ export function ApplicationDetailPage() {
                   out of 100
                 </div>
                 <div className="summary-metric-subtext">
-                  Attention required for this application
+                  Operational review urgency
                 </div>
               </div>
               <span className={`badge ${priorityLevel === 'HIGH' ? 'badge-high' : priorityLevel === 'MEDIUM' ? 'badge-medium' : 'badge-low'}`} style={{ width: 'fit-content', fontSize: '0.725rem' }}>

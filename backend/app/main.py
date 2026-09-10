@@ -42,6 +42,16 @@ try:
             if "verification_issue_type" not in ra_columns:
                 conn.execute(text("ALTER TABLE review_assessments ADD COLUMN verification_issue_type VARCHAR(100)"))
             conn.commit()
+    if not settings.DATABASE_URL.startswith("sqlite"):
+        with engine.connect() as conn:
+            try:
+                conn.execute(text("ALTER TABLE evidence_nodes ALTER COLUMN node_id TYPE VARCHAR(255)"))
+                conn.execute(text("ALTER TABLE evidence_relationships ALTER COLUMN relationship_id TYPE VARCHAR(500)"))
+                conn.execute(text("ALTER TABLE evidence_relationships ALTER COLUMN source_node_id TYPE VARCHAR(255)"))
+                conn.execute(text("ALTER TABLE evidence_relationships ALTER COLUMN target_node_id TYPE VARCHAR(255)"))
+                conn.commit()
+            except Exception as ex:
+                logger.warning(f"Note on evidence column alter: {ex}")
     logger.info("Database tables initialized and migrated successfully.")
 except Exception as e:
     logger.error(f"Error initializing database tables: {e}")

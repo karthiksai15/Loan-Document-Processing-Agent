@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, ArrowRight, RefreshCw, FileText } from 'lucide-react';
+import { Search, ArrowRight, RefreshCw, FileText, Database } from 'lucide-react';
 import { api } from '../services/api';
 import { RiskBadge, StatusBadge } from '../components/Common/Badges';
 import { formatINR, formatDateTime } from '../services/formatters';
@@ -11,6 +11,7 @@ import { EmptyState } from '../components/Common/EmptyState';
 export function ApplicationsPage() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingDemo, setLoadingDemo] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
@@ -43,7 +44,23 @@ export function ApplicationsPage() {
 
   useEffect(() => {
     loadApplications();
+    const handleSeeded = () => loadApplications();
+    window.addEventListener('loan-data-seeded', handleSeeded);
+    return () => window.removeEventListener('loan-data-seeded', handleSeeded);
   }, []);
+
+  const handleLoadDemoData = async () => {
+    try {
+      setLoadingDemo(true);
+      await api.seedDemoData();
+      window.dispatchEvent(new CustomEvent('loan-data-seeded'));
+      await loadApplications();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoadingDemo(false);
+    }
+  };
 
   const handleFilterChange = (filterVal) => {
     if (filterVal === 'ALL') {
@@ -221,7 +238,7 @@ export function ApplicationsPage() {
               <tr>
                 <th>Applicant</th>
                 <th>Loan</th>
-                <th>Risk</th>
+                <th>ML Risk</th>
                 <th>Status</th>
                 <th>Issue</th>
                 <th>Updated</th>
@@ -277,20 +294,37 @@ export function ApplicationsPage() {
         </div>
       ) : (
         <EmptyState
-          title="No applications match this view"
-          description={searchTerm ? `No loan applications found matching "${searchTerm}".` : 'Try selecting a different filter.'}
+          title={applications.length === 0 ? "No Applications Loaded" : "No applications match this view"}
+          description={
+            applications.length === 0
+              ? "The loan processing database is currently empty. Click below to load and process all 10 demo applications."
+              : (searchTerm ? `No loan applications found matching "${searchTerm}".` : 'Try selecting a different filter.')
+          }
           icon={FileText}
           action={
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => {
-                setSearchTerm('');
-                handleFilterChange('ALL');
-              }}
-            >
-              Clear Filters
-            </button>
+            applications.length === 0 ? (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleLoadDemoData}
+                disabled={loadingDemo}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <Database size={15} />
+                <span>{loadingDemo ? 'Loading Demo Data...' : 'Load Demo Data'}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  setSearchTerm('');
+                  handleFilterChange('ALL');
+                }}
+              >
+                Clear Filters
+              </button>
+            )
           }
         />
       )}

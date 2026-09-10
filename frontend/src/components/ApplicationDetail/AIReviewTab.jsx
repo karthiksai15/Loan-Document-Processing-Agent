@@ -39,11 +39,11 @@ export function AIReviewTab({ applicationId, agentReview, onRefresh }) {
           No AI Agent Investigation Run Yet
         </h3>
         <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', maxWidth: '480px', margin: '0 auto 1.5rem' }}>
-          Launch the autonomous LangGraph AI Loan Review Agent. The agent iteratively investigates the application, cross-checks evidence, searches RBI policies, and compiles an explainable report.
+          Launch the Decision Support AI Loan Review Agent. The agent iteratively investigates the application, cross-checks evidence against bank and regulatory policies, and compiles an explainable report for officer review.
         </p>
         {error && <ErrorAlert message={error} />}
         {running ? (
-          <LoadingState message="Running autonomous AI investigation loop..." />
+          <LoadingState message="Running AI investigation workflow..." />
         ) : (
           <button
             type="button"
@@ -192,7 +192,7 @@ export function AIReviewTab({ applicationId, agentReview, onRefresh }) {
           <div className="card-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <ShieldCheck size={16} color="var(--color-primary-600)" />
-              <h4 style={{ fontSize: '0.9rem', fontWeight: 600 }}>Policy Citations (RAG)</h4>
+              <h4 style={{ fontSize: '0.9rem', fontWeight: 600 }}>Policy Citations (Policy Knowledge Base)</h4>
             </div>
             <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
               {review.policy_references?.length || 0} Retrieved Sections
@@ -235,7 +235,7 @@ export function AIReviewTab({ applicationId, agentReview, onRefresh }) {
           <div className="card-header">
             <h4 style={{ fontSize: '0.9rem', fontWeight: 600 }}>Agent Investigation Trace</h4>
             <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-              Autonomous reasoning & tool call sequence
+              Investigation steps & evidence verification sequence
             </span>
           </div>
           <div className="card-body">
@@ -249,7 +249,7 @@ export function AIReviewTab({ applicationId, agentReview, onRefresh }) {
                     </span>
                     {step.tool_name && (
                       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.725rem', background: 'var(--color-primary-50)', color: 'var(--color-primary-700)', padding: '0.1rem 0.4rem', borderRadius: 'var(--radius-sm)' }}>
-                        tool: {step.tool_name}
+                        action: {step.tool_name}
                       </span>
                     )}
                   </div>

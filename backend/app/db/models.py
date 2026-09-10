@@ -258,14 +258,14 @@ class VerificationFindingModel(Base):
 class EvidenceNodeModel(Base):
     __tablename__ = "evidence_nodes"
     
-    node_id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    node_id: Mapped[str] = mapped_column(String(255), primary_key=True)
     application_id: Mapped[str] = mapped_column(String(100), ForeignKey("applications.application_id", ondelete="CASCADE"), nullable=False)
     document_id: Mapped[Optional[str]] = mapped_column(String(100), ForeignKey("documents.document_id", ondelete="SET NULL"), nullable=True)
     node_type: Mapped[str] = mapped_column(String(50), nullable=False)  # APPLICATION, DOCUMENT, FIELD, VALIDATION_RESULT, VERIFICATION_FINDING
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
     value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     source_type: Mapped[str] = mapped_column(String(50), default="SYSTEM")  # APPLICATION_DATA, EXTRACTED_FIELD, VALIDATION_CHECK, VERIFICATION_RULE
-    source_reference: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    source_reference: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     confidence: Mapped[float] = mapped_column(Float, default=1.0)
     node_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -288,10 +288,10 @@ class EvidenceNodeModel(Base):
 class EvidenceRelationshipModel(Base):
     __tablename__ = "evidence_relationships"
     
-    relationship_id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    relationship_id: Mapped[str] = mapped_column(String(500), primary_key=True)
     application_id: Mapped[str] = mapped_column(String(100), ForeignKey("applications.application_id", ondelete="CASCADE"), nullable=False)
-    source_node_id: Mapped[str] = mapped_column(String(100), ForeignKey("evidence_nodes.node_id", ondelete="CASCADE"), nullable=False)
-    target_node_id: Mapped[str] = mapped_column(String(100), ForeignKey("evidence_nodes.node_id", ondelete="CASCADE"), nullable=False)
+    source_node_id: Mapped[str] = mapped_column(String(255), ForeignKey("evidence_nodes.node_id", ondelete="CASCADE"), nullable=False)
+    target_node_id: Mapped[str] = mapped_column(String(255), ForeignKey("evidence_nodes.node_id", ondelete="CASCADE"), nullable=False)
     relationship_type: Mapped[str] = mapped_column(String(50), nullable=False)  # HAS_DOCUMENT, CONTAINS_FIELD, HAS_VALIDATION, HAS_FINDING, DERIVED_FROM, SUPPORTS, COMPARED_WITH
     rel_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -345,7 +345,7 @@ class PolicyDocumentModel(Base):
     __tablename__ = "policy_documents"
     
     policy_doc_id: Mapped[str] = mapped_column(String(100), primary_key=True)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
     policy_type: Mapped[str] = mapped_column(String(50), nullable=False)  # REGULATORY, INTERNAL_UNDERWRITING
     authority: Mapped[str] = mapped_column(String(100), nullable=False)  # RBI, INTERNAL_BANK
     category: Mapped[str] = mapped_column(String(100), nullable=False)  # KYC, DIGITAL_LENDING, CREDIT_REPORTING, FAIR_PRACTICES, UNDERWRITING_METRICS
@@ -374,7 +374,7 @@ class PolicySectionModel(Base):
     policy_doc_id: Mapped[str] = mapped_column(String(100), ForeignKey("policy_documents.policy_doc_id", ondelete="CASCADE"), nullable=False)
     chapter_or_part: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     section_number: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    section_title: Mapped[str] = mapped_column(String(255), nullable=False)
+    section_title: Mapped[str] = mapped_column(Text, nullable=False)
     page_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     content_text: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
