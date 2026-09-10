@@ -2,6 +2,24 @@ import os
 from typing import Literal
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+def _find_default_data_dir() -> str:
+    if "DATA_DIR" in os.environ and os.environ["DATA_DIR"]:
+        return os.environ["DATA_DIR"]
+    cwd_data = os.path.join(os.getcwd(), "data")
+    if os.path.isdir(cwd_data):
+        return cwd_data
+    parent_data = os.path.join(os.getcwd(), "..", "data")
+    if os.path.isdir(parent_data):
+        return os.path.abspath(parent_data)
+    here = os.path.abspath(__file__)
+    root_candidate = os.path.abspath(os.path.join(here, "..", "..", "..", "..", "data"))
+    if os.path.isdir(root_candidate):
+        return root_candidate
+    app_candidate = os.path.abspath(os.path.join(here, "..", "..", "..", "data"))
+    if os.path.isdir(app_candidate):
+        return app_candidate
+    return root_candidate
+
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Loan Document Processing Agent API"
     VERSION: str = "1.0.0"
@@ -36,22 +54,16 @@ class Settings(BaseSettings):
     CONFIDENCE_HIGH_THRESHOLD: float = 80.0
     CONFIDENCE_MEDIUM_THRESHOLD: float = 50.0
     
+    CORS_ORIGINS: str = "*"
+    PORT: int = 8000
+
     # Database Settings
     DATABASE_URL: str = "sqlite:///./loan_agent.db"
     
     # Storage Paths
-    DATA_DIR: str = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), 
-        "data"
-    )
-    UPLOADS_DIR: str = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), 
-        "data", "uploads"
-    )
-    EXTRACTED_TEXT_DIR: str = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), 
-        "data", "extracted_text"
-    )
+    DATA_DIR: str = _find_default_data_dir()
+    UPLOADS_DIR: str = os.path.join(_find_default_data_dir(), "uploads")
+    EXTRACTED_TEXT_DIR: str = os.path.join(_find_default_data_dir(), "extracted_text")
     
     # Document Upload Validation
     MAX_UPLOAD_SIZE_MB: int = 10
@@ -60,10 +72,7 @@ class Settings(BaseSettings):
     
     # Policy RAG Settings (Phase 14)
     POLICY_EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
-    VECTOR_STORE_DIR: str = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), 
-        "data", "vector_store"
-    )
+    VECTOR_STORE_DIR: str = os.path.join(_find_default_data_dir(), "vector_store")
     POLICY_CHUNK_SIZE: int = 500
     POLICY_CHUNK_OVERLAP: int = 50
     

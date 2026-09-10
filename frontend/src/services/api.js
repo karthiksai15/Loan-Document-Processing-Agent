@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_BASE = '/api/v1';
+const rawBase = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
+const API_BASE = rawBase
+  ? (rawBase.endsWith('/api/v1') ? rawBase : `${rawBase}/api/v1`)
+  : '/api/v1';
 
 const apiClient = axios.create({
   baseURL: API_BASE,
@@ -50,7 +53,7 @@ export const api = {
   getDocumentText: (docId) => apiClient.get(`/documents/${docId}/text`),
   getDocumentFields: (docId) => apiClient.get(`/documents/${docId}/extracted-fields`),
   getDocumentValidation: (docId) => apiClient.get(`/documents/${docId}/validation`),
-  getDocumentDownloadUrl: (docId) => `/api/v1/documents/${docId}/download`,
+  getDocumentDownloadUrl: (docId) => `${API_BASE}/documents/${docId}/download`,
 
   // AI Review Agent (LangGraph)
   runAgentReview: (appId, forceRebuild = false) =>

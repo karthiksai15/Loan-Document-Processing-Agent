@@ -63,9 +63,15 @@ app = FastAPI(
 )
 
 # Set up CORS middleware
+cors_raw = getattr(settings, "CORS_ORIGINS", "*")
+if cors_raw == "*" or not cors_raw:
+    cors_origins = ["*"]
+else:
+    cors_origins = [o.strip() for o in cors_raw.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -73,14 +79,27 @@ app.add_middleware(
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+@app.get("/health")
+def health_check():
+    """Root health check endpoint for Cloud monitoring (Render / load balancers)."""
+    return {
+        "status": "healthy",
+        "project": settings.PROJECT_NAME,
+        "version": settings.VERSION,
+        "llm_provider": settings.LLM_PROVIDER
+    }
+
 @app.get("/")
 def root():
     return {
         "message": f"Welcome to {settings.PROJECT_NAME}",
         "docs_url": "/docs",
+        "health_url": "/health",
         "api_v1": f"{settings.API_V1_STR}/health"
     }
 
 if __name__ == "__main__":
+    import os
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.environ.get("PORT", getattr(settings, "PORT", 8000) or 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
