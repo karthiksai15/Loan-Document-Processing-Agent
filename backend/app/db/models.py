@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from sqlalchemy import String, Integer, Float, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import String, Integer, Float, DateTime, ForeignKey, Text, JSON, LargeBinary
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
@@ -8,6 +8,8 @@ class LoanApplicationModel(Base):
     __tablename__ = "applications"
     
     application_id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    application_number: Mapped[Optional[str]] = mapped_column(String(100), unique=True, index=True, nullable=True)
+    user_id: Mapped[Optional[str]] = mapped_column(String(100), ForeignKey("users.id"), nullable=True, index=True)
     applicant_name: Mapped[str] = mapped_column(String(255), nullable=False)
     income_annum: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     loan_amount: Mapped[float] = mapped_column(Float, default=0.0)
@@ -22,6 +24,7 @@ class LoanApplicationModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    customer: Mapped[Optional["UserModel"]] = relationship("UserModel", back_populates="applications", foreign_keys=[user_id])
     documents: Mapped[List["DocumentModel"]] = relationship("DocumentModel", back_populates="application", cascade="all, delete-orphan")
     verifications: Mapped[List["ApplicationVerificationModel"]] = relationship("ApplicationVerificationModel", back_populates="application", cascade="all, delete-orphan")
     review_assessments: Mapped[List["ReviewAssessmentModel"]] = relationship("ReviewAssessmentModel", back_populates="application", cascade="all, delete-orphan")
@@ -108,6 +111,8 @@ class DocumentModel(Base):
     validation_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     validated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     
+    uploaded_by: Mapped[Optional[str]] = mapped_column(String(100), ForeignKey("users.id"), nullable=True)
+    storage_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     uploaded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -115,6 +120,7 @@ class DocumentModel(Base):
     applicant: Mapped[Optional["ApplicantModel"]] = relationship("ApplicantModel", back_populates="legacy_documents")
     extracted_fields_data: Mapped[List["ExtractedFieldModel"]] = relationship("ExtractedFieldModel", back_populates="document", cascade="all, delete-orphan")
     validation_data: Mapped[List["DocumentValidationModel"]] = relationship("DocumentValidationModel", back_populates="document", cascade="all, delete-orphan")
+    file_record: Mapped[Optional["DocumentFileModel"]] = relationship("DocumentFileModel", back_populates="document", uselist=False, cascade="all, delete-orphan")
 
 
 class ExtractedFieldModel(Base):
@@ -567,4 +573,45 @@ class HumanReviewAuditModel(Base):
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     application: Mapped["LoanApplicationModel"] = relationship("LoanApplicationModel", back_populates="human_review_audits")
+
+
+class UserModel(Base):
+    """
+    User account model supporting Google OAuth 2.0 and role-based access (Phase 1 Auth).
+    Roles:
+      - CUSTOMER: Borrowers accessing customer portal & submitting loan applications
+      - LOAN_OFFICER: Bank officers reviewing, verifying, and deciding loan applications
+      - MANAGER: Credit managers with supervisory and underwriting review authority
+    """
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    google_id: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    picture_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    role: Mapped[str] = mapped_column(String(50), default="CUSTOMER", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    applications: Mapped[List["LoanApplicationModel"]] = relationship("LoanApplicationModel", back_populates="customer")
+
+
+class DocumentFileModel(Base):
+    """
+    Binary persistent document storage for Render / Cloud deployment.
+    Stores actual document bytes in database to guarantee file survival
+    even across ephemeral container restarts.
+    """
+    __tablename__ = "document_files"
+
+    document_id: Mapped[str] = mapped_column(
+        String(100), ForeignKey("documents.document_id", ondelete="CASCADE"), primary_key=True
+    )
+    file_content: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    document: Mapped["DocumentModel"] = relationship("DocumentModel", back_populates="file_record")
 

@@ -19,3 +19,5 @@ pytest>=7.0.0
 PyMuPDF>=1.22.0
 pytesseract>=0.3.10
 Pillow>=9.5.0
+pyjwt>=2.8.0
+google-auth>=2.20.0

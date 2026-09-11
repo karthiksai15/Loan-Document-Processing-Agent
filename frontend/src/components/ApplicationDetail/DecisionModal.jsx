@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldCheck, AlertTriangle, X, Check } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 export function DecisionModal({
   isOpen,
@@ -8,7 +9,10 @@ export function DecisionModal({
   onConfirm,
   submitting,
   initialDecision = 'APPROVED',
+  officerId,
 }) {
+  const { user } = useAuth();
+  const effectiveOfficerId = officerId || user?.id;
   const [decision, setDecision] = useState(initialDecision);
   const [decisionReason, setDecisionReason] = useState('');
   const [overrideReason, setOverrideReason] = useState('');
@@ -64,7 +68,7 @@ export function DecisionModal({
     }
 
     onConfirm({
-      officerId: 'loan_officer_001',
+      officerId: effectiveOfficerId,
       decision,
       decisionReason: decisionReason.trim() || undefined,
       overrideReason: overrideActive ? overrideReason.trim() : undefined,

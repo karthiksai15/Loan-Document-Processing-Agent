@@ -13,6 +13,20 @@ const apiClient = axios.create({
   timeout: 30000,
 });
 
+export const TOKEN_STORAGE_KEY = 'genbank_access_token';
+
+// Request interceptor to attach Authorization: Bearer <token>
+apiClient.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    const token = window.localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return config;
+});
+
 // Response interceptor for unified error message extraction
 apiClient.interceptors.response.use(
   (response) => response.data,
@@ -22,11 +36,19 @@ apiClient.interceptors.response.use(
       error.response?.data?.message ||
       error.message ||
       'An unexpected network error occurred';
-    return Promise.reject(new Error(message));
+    const err = new Error(message);
+    err.status = error.response?.status;
+    err.data = error.response?.data;
+    return Promise.reject(err);
   }
 );
 
 export const api = {
+  // Authentication (Google OAuth 2.0 & Session)
+  authGoogle: (idToken, role = null) =>
+    apiClient.post('/auth/google', { id_token: idToken, role }),
+  getMe: () => apiClient.get('/auth/me'),
+
   // System Health & Info
   getSystemHealth: () => apiClient.get('/health'),
   getSystemInfo: () => apiClient.get('/system/info'),
@@ -64,7 +86,7 @@ export const api = {
   // Confidence & Human Review Gate
   getHumanReview: (appId) => apiClient.get(`/applications/${appId}/human-review`),
   evaluateHumanReview: (appId) => apiClient.post(`/applications/${appId}/human-review`),
-  acknowledgeReview: (appId, officerId = 'loan_officer_001') =>
+  acknowledgeReview: (appId, officerId) =>
     apiClient.post(`/applications/${appId}/human-review/acknowledge`, { officer_id: officerId }),
   addOfficerNote: (appId, officerId, note) =>
     apiClient.post(`/applications/${appId}/human-review/note`, { officer_id: officerId, note }),
@@ -103,4 +125,21 @@ export const api = {
       filter_policy_type: options.policyType || null,
       filter_category: options.category || null,
     }),
+
+  // Customer Portal (Phase 1)
+  getCustomerApplications: () => apiClient.get('/customer/applications'),
+  createCustomerApplication: (payload) => apiClient.post('/customer/applications', payload),
+  getCustomerApplication: (appId) => apiClient.get(`/customer/applications/${appId}`),
+  uploadCustomerDocument: (appId, file, documentType) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('document_type', documentType);
+    return apiClient.post(`/customer/applications/${appId}/documents`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  deleteCustomerDocument: (appId, docId) =>
+    apiClient.delete(`/customer/applications/${appId}/documents/${docId}`),
+  submitCustomerApplication: (appId) =>
+    apiClient.post(`/customer/applications/${appId}/submit`),
 };

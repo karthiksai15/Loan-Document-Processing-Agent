@@ -11,6 +11,8 @@ class ApplicationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     application_id: str
+    application_number: Optional[str] = None
+    user_id: Optional[str] = None
     applicant_name: str
     loan_amount: float
     status: str

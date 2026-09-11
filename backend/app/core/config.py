@@ -1,5 +1,5 @@
 import os
-from typing import Literal
+from typing import Literal, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 def _find_default_data_dir() -> str:
@@ -75,9 +75,18 @@ class Settings(BaseSettings):
     VECTOR_STORE_DIR: str = os.path.join(_find_default_data_dir(), "vector_store")
     POLICY_CHUNK_SIZE: int = 500
     POLICY_CHUNK_OVERLAP: int = 50
+
+    # Authentication & OAuth Settings (Phase 1)
+    GOOGLE_CLIENT_SECRET: Optional[str] = None
+    GOOGLE_CLIENT_ID: str = "927480599191-iock07diunjgmr0t3fdi3teh7ot5grk5.apps.googleusercontent.com"
+    JWT_SECRET_KEY: str = "genbank-jwt-dev-secret-key-change-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
+    LOAN_OFFICER_EMAILS: str = ""
+    MANAGER_EMAILS: str = ""
     
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "backend/.env"),
         env_file_encoding="utf-8",
         extra="ignore"
     )

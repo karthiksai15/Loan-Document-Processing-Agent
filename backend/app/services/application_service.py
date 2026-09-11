@@ -24,7 +24,14 @@ def create_application(db: Session, data: ApplicationCreate) -> LoanApplicationM
     return app_obj
 
 def get_application(db: Session, application_id: str) -> Optional[LoanApplicationModel]:
-    return db.query(LoanApplicationModel).filter(LoanApplicationModel.application_id == application_id).first()
+    return (
+        db.query(LoanApplicationModel)
+        .filter(
+            (LoanApplicationModel.application_id == application_id) |
+            (LoanApplicationModel.application_number == application_id)
+        )
+        .first()
+    )
 
 def list_applications(db: Session) -> List[LoanApplicationModel]:
     return db.query(LoanApplicationModel).order_by(LoanApplicationModel.created_at.desc()).all()

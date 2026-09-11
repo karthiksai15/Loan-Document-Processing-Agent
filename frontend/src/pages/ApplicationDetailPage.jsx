@@ -28,6 +28,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { formatINR, formatPercent, formatDateTime, formatAgentRecommendation } from '../services/formatters';
 
 // Modals
@@ -81,6 +82,9 @@ export function ApplicationDetailPage() {
   const [actionError, setActionError] = useState('');
   const [submittingAction, setSubmittingAction] = useState(false);
 
+  const { user } = useAuth();
+  const activeOfficerId = user?.id;
+
   const loadApplicationData = useCallback(async (isInitial = false) => {
     if (!applicationId) return;
 
@@ -117,14 +121,35 @@ export function ApplicationDetailPage() {
     } catch (err) {
       setError(err.message);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (isInitial) setLoading(false);
+      else setRefreshing(false);
     }
   }, [applicationId]);
 
   useEffect(() => {
     loadApplicationData(true);
   }, [loadApplicationData]);
+
+  // Helper for activeDrawer state compatibility if needed
+  const setActiveDrawer = (drawer) => {
+    if (!drawer) {
+      setDrawerOpen(false);
+    } else {
+      setDrawerView(drawer);
+      setDrawerOpen(true);
+    }
+  };
+
+  // Handle ESC key to close any active drawer
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setActiveDrawer(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Drawer Openers
   const openDocumentDrawer = (doc) => {
@@ -157,7 +182,7 @@ export function ApplicationDetailPage() {
     try {
       setSubmittingAction(true);
       setActionError('');
-      await api.acknowledgeReview(applicationId, 'loan_officer_001');
+      await api.acknowledgeReview(applicationId, activeOfficerId);
       setActionSuccess('Review successfully acknowledged. Status updated to IN_REVIEW.');
       setTimeout(() => setActionSuccess(''), 4000);
       loadApplicationData(false);
@@ -174,7 +199,7 @@ export function ApplicationDetailPage() {
     try {
       setSubmittingAction(true);
       setActionError('');
-      await api.addOfficerNote(applicationId, 'loan_officer_001', noteInput.trim());
+      await api.addOfficerNote(applicationId, activeOfficerId, noteInput.trim());
       setNoteModalOpen(false);
       setNoteInput('');
       setActionSuccess('Officer note added to review audit trail.');
@@ -191,7 +216,7 @@ export function ApplicationDetailPage() {
     try {
       setSubmittingAction(true);
       setActionError('');
-      await api.requestDocuments(applicationId, 'loan_officer_001', data.documents, data.reason);
+      await api.requestDocuments(applicationId, activeOfficerId, data.documents, data.reason);
       setDocModalOpen(false);
       setActionSuccess(`Document request dispatched for ${data.documents.join(', ')}.`);
       setTimeout(() => setActionSuccess(''), 4000);
@@ -207,7 +232,10 @@ export function ApplicationDetailPage() {
     try {
       setSubmittingAction(true);
       setActionError('');
-      await api.recordHumanDecision(applicationId, payload);
+      await api.recordHumanDecision(applicationId, {
+        ...payload,
+        officerId: payload.officerId || activeOfficerId,
+      });
       setDecisionModalOpen(false);
       setActionSuccess(`Final decision '${payload.decision}' successfully recorded in audit log.`);
       setTimeout(() => setActionSuccess(''), 4000);
@@ -223,7 +251,10 @@ export function ApplicationDetailPage() {
     try {
       setSubmittingAction(true);
       setActionError('');
-      await api.submitFeedback(applicationId, payload);
+      await api.submitFeedback(applicationId, {
+        ...payload,
+        officerId: payload.officerId || activeOfficerId,
+      });
       setFeedbackModalOpen(false);
       setActionSuccess('Officer feedback recorded for underwriting improvement.');
       setTimeout(() => setActionSuccess(''), 4000);
@@ -927,87 +958,105 @@ export function ApplicationDetailPage() {
             </div>
           </div>
 
-          {/* Action Buttons Row */}
-          <div className="human-review-actions-row">
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={handleAcknowledge}
-              disabled={submittingAction}
-              style={{ fontSize: '0.75rem', padding: '0.45rem 0.35rem' }}
-              title="Acknowledge review"
+          {user?.role === 'CUSTOMER' ? (
+            <div
+              style={{
+                padding: '0.875rem 1rem',
+                background: 'var(--color-bg-subtle)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '0.8rem',
+                color: 'var(--color-text-secondary)',
+                textAlign: 'center',
+                border: '1px solid var(--color-border)',
+              }}
             >
-              <Check size={14} />
-              <span>{submittingAction ? 'Acknowledging...' : 'Acknowledge'}</span>
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => setNoteModalOpen(true)}
-              disabled={submittingAction}
-              style={{ fontSize: '0.75rem', padding: '0.45rem 0.35rem' }}
-              title="Add underwriter note"
-            >
-              <FileText size={14} />
-              <span>Add Note</span>
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => handleOpenDocRequest(missingDocType)}
-              disabled={submittingAction}
-              style={{ fontSize: '0.75rem', padding: '0.45rem 0.35rem' }}
-              title="Request missing documents"
-            >
-              <FileQuestion size={14} />
-              <span>Request Docs</span>
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => setFeedbackModalOpen(true)}
-              disabled={submittingAction}
-              style={{ fontSize: '0.75rem', padding: '0.45rem 0.35rem' }}
-              title="Submit officer feedback"
-            >
-              <MessageSquare size={14} />
-              <span>Feedback</span>
-            </button>
-          </div>
+              Underwriting review actions and credit decisions are restricted to bank loan officers.
+            </div>
+          ) : (
+            <>
+              {/* Action Buttons Row */}
+              <div className="human-review-actions-row">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleAcknowledge}
+                  disabled={submittingAction}
+                  style={{ fontSize: '0.75rem', padding: '0.45rem 0.35rem' }}
+                  title="Acknowledge review"
+                >
+                  <Check size={14} />
+                  <span>{submittingAction ? 'Acknowledging...' : 'Acknowledge'}</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setNoteModalOpen(true)}
+                  disabled={submittingAction}
+                  style={{ fontSize: '0.75rem', padding: '0.45rem 0.35rem' }}
+                  title="Add underwriter note"
+                >
+                  <FileText size={14} />
+                  <span>Add Note</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => handleOpenDocRequest(missingDocType)}
+                  disabled={submittingAction}
+                  style={{ fontSize: '0.75rem', padding: '0.45rem 0.35rem' }}
+                  title="Request missing documents"
+                >
+                  <FileQuestion size={14} />
+                  <span>Request Docs</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setFeedbackModalOpen(true)}
+                  disabled={submittingAction}
+                  style={{ fontSize: '0.75rem', padding: '0.45rem 0.35rem' }}
+                  title="Submit officer feedback"
+                >
+                  <MessageSquare size={14} />
+                  <span>Feedback</span>
+                </button>
+              </div>
 
-          {/* Final Decision Buttons Row */}
-          <div className="human-review-decisions-row">
-            <button
-              type="button"
-              className="btn btn-success"
-              onClick={() => handleOpenDecision('APPROVED')}
-              disabled={submittingAction}
-              style={{ padding: '0.65rem 0.5rem', fontWeight: 600, fontSize: '0.875rem' }}
-            >
-              <Check size={16} />
-              <span>Approve</span>
-            </button>
-            <button
-              type="button"
-              className="btn btn-danger"
-              onClick={() => handleOpenDecision('REJECTED')}
-              disabled={submittingAction}
-              style={{ padding: '0.65rem 0.5rem', fontWeight: 600, fontSize: '0.875rem' }}
-            >
-              <X size={16} />
-              <span>Reject</span>
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => handleOpenDecision('ESCALATED')}
-              disabled={submittingAction}
-              style={{ padding: '0.65rem 0.5rem', fontWeight: 600, fontSize: '0.875rem' }}
-            >
-              <ArrowUpRight size={16} />
-              <span>Escalate</span>
-            </button>
-          </div>
+              {/* Final Decision Buttons Row */}
+              <div className="human-review-decisions-row">
+                <button
+                  type="button"
+                  className="btn btn-success"
+                  onClick={() => handleOpenDecision('APPROVED')}
+                  disabled={submittingAction}
+                  style={{ padding: '0.65rem 0.5rem', fontWeight: 600, fontSize: '0.875rem' }}
+                >
+                  <Check size={16} />
+                  <span>Approve</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={() => handleOpenDecision('REJECTED')}
+                  disabled={submittingAction}
+                  style={{ padding: '0.65rem 0.5rem', fontWeight: 600, fontSize: '0.875rem' }}
+                >
+                  <X size={16} />
+                  <span>Reject</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => handleOpenDecision('ESCALATED')}
+                  disabled={submittingAction}
+                  style={{ padding: '0.65rem 0.5rem', fontWeight: 600, fontSize: '0.875rem' }}
+                >
+                  <ArrowUpRight size={16} />
+                  <span>Escalate</span>
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -1127,6 +1176,7 @@ export function ApplicationDetailPage() {
         onClose={() => setDecisionModalOpen(false)}
         onConfirm={handleDecisionSubmit}
         submitting={submittingAction}
+        officerId={activeOfficerId}
       />
 
       <DocumentRequestModal
@@ -1142,6 +1192,7 @@ export function ApplicationDetailPage() {
         onClose={() => setFeedbackModalOpen(false)}
         onSubmit={handleFeedbackSubmit}
         submitting={submittingAction}
+        officerId={activeOfficerId}
       />
 
       {/* Add Note Modal */}

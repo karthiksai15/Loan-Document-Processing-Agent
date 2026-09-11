@@ -115,7 +115,7 @@ export function DecisionHistoryDrawer({ applicationId }) {
                   </span>
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
-                  Officer: <strong>{ev.officer_id || 'loan_officer_001'}</strong>
+                  Officer: <strong>{ev.officer_id || ev.actor_id || 'Officer'}</strong>
                 </div>
                 {ev.notes && (
                   <div style={{ marginTop: '0.35rem', padding: '0.4rem 0.6rem', background: '#f8fafc', borderRadius: 'var(--radius-sm)', fontSize: '0.725rem', color: 'var(--color-text-muted)' }}>

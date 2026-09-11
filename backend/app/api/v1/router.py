@@ -9,10 +9,14 @@ from app.api.v1.policies import router as policies_router
 from app.api.v1.llm import router as llm_router
 from app.api.v1.agent import router as agent_router
 from app.api.v1.human_review import router as human_review_router
+from app.api.v1.auth import router as auth_router
+from app.api.v1.customer import router as customer_router
 
 api_router = APIRouter()
 
 # Include feature sub-routers
+api_router.include_router(auth_router)
+api_router.include_router(customer_router)
 api_router.include_router(applications_router)
 api_router.include_router(documents_router)
 api_router.include_router(policies_router)

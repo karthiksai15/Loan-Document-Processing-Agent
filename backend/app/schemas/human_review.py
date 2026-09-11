@@ -84,18 +84,18 @@ class HumanReviewGateResponse(BaseModel):
 
 class AcknowledgeReviewRequest(BaseModel):
     """Request to acknowledge a required review."""
-    officer_id: str = Field(..., min_length=1, description="Loan officer identifier acknowledging the review")
+    officer_id: Optional[str] = Field(default=None, description="Loan officer identifier acknowledging the review")
 
 
 class OfficerNoteRequest(BaseModel):
     """Request to append an officer note."""
-    officer_id: str = Field(..., min_length=1, description="Loan officer identifier")
+    officer_id: Optional[str] = Field(default=None, description="Loan officer identifier")
     note: str = Field(..., min_length=1, description="Officer note text")
 
 
 class RequestDocumentsRequest(BaseModel):
     """Request to request additional documents from the applicant."""
-    officer_id: str = Field(..., min_length=1, description="Loan officer identifier")
+    officer_id: Optional[str] = Field(default=None, description="Loan officer identifier")
     documents: List[str] = Field(..., min_length=1, description="List of document types requested")
     reason: str = Field(..., min_length=1, description="Reason for requesting these documents")
 
@@ -106,7 +106,7 @@ class HumanDecisionRequest(BaseModel):
     Enforces that override_reason is provided if human_decision != ai_recommendation.
     Requires decision_reason for APPROVED and REJECTED decisions.
     """
-    officer_id: str = Field(..., min_length=1, description="Loan officer identifier")
+    officer_id: Optional[str] = Field(default=None, description="Loan officer identifier")
     decision: str = Field(
         ...,
         description="Human decision: APPROVED, REJECTED, OFFICER_INVESTIGATION, DOCUMENT_FOLLOWUP, or ESCALATED"

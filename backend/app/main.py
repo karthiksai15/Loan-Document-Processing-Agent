@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.logging import logger
 from app.db.base import Base
+from app.db.models import UserModel
 from app.db.session import engine
 from app.api.v1.router import api_router
 
@@ -41,6 +42,22 @@ try:
                 conn.execute(text("ALTER TABLE review_assessments ADD COLUMN critical_issue VARCHAR(100)"))
             if "verification_issue_type" not in ra_columns:
                 conn.execute(text("ALTER TABLE review_assessments ADD COLUMN verification_issue_type VARCHAR(100)"))
+            conn.commit()
+    if "applications" in inspector.get_table_names():
+        app_cols = {c["name"] for c in inspector.get_columns("applications")}
+        with engine.connect() as conn:
+            if "application_number" not in app_cols:
+                conn.execute(text("ALTER TABLE applications ADD COLUMN application_number VARCHAR(100)"))
+            if "user_id" not in app_cols:
+                conn.execute(text("ALTER TABLE applications ADD COLUMN user_id VARCHAR(100)"))
+            conn.commit()
+    if "documents" in inspector.get_table_names():
+        doc_cols = {c["name"] for c in inspector.get_columns("documents")}
+        with engine.connect() as conn:
+            if "uploaded_by" not in doc_cols:
+                conn.execute(text("ALTER TABLE documents ADD COLUMN uploaded_by VARCHAR(100)"))
+            if "storage_key" not in doc_cols:
+                conn.execute(text("ALTER TABLE documents ADD COLUMN storage_key VARCHAR(255)"))
             conn.commit()
     if not settings.DATABASE_URL.startswith("sqlite"):
         with engine.connect() as conn:

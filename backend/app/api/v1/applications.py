@@ -15,6 +15,7 @@ from app.services import (
 )
 from app.services.cross_document_verification_service import get_application_profile_data
 from app.ml.predictor import predict_application_risk
+from app.api.deps import check_officer_permission
 import logging
 
 logger = logging.getLogger(__name__)
@@ -75,6 +76,8 @@ def _enrich_application_response(db: Session, a) -> ApplicationResponse:
 
     return ApplicationResponse(
         application_id=a.application_id,
+        application_number=getattr(a, "application_number", None) or a.application_id,
+        user_id=getattr(a, "user_id", None),
         applicant_name=chosen_name,
         loan_amount=chosen_amount,
         status=a.status,
@@ -99,7 +102,10 @@ def _enrich_application_response(db: Session, a) -> ApplicationResponse:
     )
 
 @router.get("/dashboard/overview", response_model=DashboardOverviewResponse)
-def get_dashboard_overview_endpoint(db: Session = Depends(get_db)):
+def get_dashboard_overview_endpoint(
+    db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
+):
     """Returns aggregated metrics and high-priority attention items for the loan officer dashboard."""
     apps = application_service.list_applications(db)
     enriched = [_enrich_application_response(db, a) for a in apps]
@@ -259,7 +265,8 @@ def seed_demo_data_endpoint(db: Session = Depends(get_db)):
 
 @router.get("", response_model=ApplicationListResponse)
 def list_applications_endpoint(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     """List all loan applications."""
     apps = application_service.list_applications(db)
@@ -269,7 +276,8 @@ def list_applications_endpoint(
 @router.get("/{application_id}", response_model=ApplicationResponse)
 def get_application_endpoint(
     application_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     """Retrieve loan application details."""
     app_obj = application_service.get_application(db, application_id)
@@ -283,7 +291,8 @@ def get_application_endpoint(
 @router.post("/{application_id}/verify", response_model=ApplicationVerificationResponse)
 def verify_application_endpoint(
     application_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     """Triggers cross-document verification for a loan application."""
     try:
@@ -300,7 +309,8 @@ def verify_application_endpoint(
 @router.get("/{application_id}/verification", response_model=ApplicationVerificationResponse)
 def get_application_verification_endpoint(
     application_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     """Retrieves cross-document verification summary and findings breakdown for a loan application."""
     try:
@@ -314,7 +324,8 @@ def get_application_verification_endpoint(
 @router.get("/{application_id}/evidence", response_model=ApplicationEvidenceResponse)
 def get_application_evidence_endpoint(
     application_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     """Retrieves the Evidence Graph (nodes, relationships, and summary) for a loan application."""
     try:
@@ -328,7 +339,8 @@ def get_application_evidence_endpoint(
 @router.post("/{application_id}/evidence", response_model=ApplicationEvidenceResponse)
 def build_application_evidence_endpoint(
     application_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     """Triggers generation/rebuilding of the Evidence Graph for a loan application."""
     try:
@@ -345,7 +357,8 @@ def build_application_evidence_endpoint(
 @router.post("/{application_id}/risk/predict", response_model=ApplicationRiskResponse)
 def predict_application_risk_endpoint(
     application_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     """Predicts historical loan rejection risk for an application using trained ML champion model."""
     try:
@@ -375,7 +388,8 @@ def predict_application_risk_endpoint(
 @router.post("/{application_id}/review-score", response_model=ApplicationReviewScoreResponse)
 def calculate_application_review_score_endpoint(
     application_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     """Calculates or recalculates the Review Intelligence score, priority, and breakdown for a loan application."""
     try:
@@ -392,7 +406,8 @@ def calculate_application_review_score_endpoint(
 @router.get("/{application_id}/review-score", response_model=ApplicationReviewScoreResponse)
 def get_application_review_score_endpoint(
     application_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     """Retrieves the current Review Intelligence score, priority level, and factors for a loan application."""
     try:

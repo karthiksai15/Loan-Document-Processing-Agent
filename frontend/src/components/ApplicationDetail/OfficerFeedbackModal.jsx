@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { MessageSquare, X } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
-export function OfficerFeedbackModal({ isOpen, onClose, onSubmit, submitting }) {
+export function OfficerFeedbackModal({ isOpen, onClose, onSubmit, submitting, officerId }) {
+  const { user } = useAuth();
+  const effectiveOfficerId = officerId || user?.id;
   const [category, setCategory] = useState('CORRECT');
   const [feedback, setFeedback] = useState('');
   const [error, setError] = useState('');
@@ -24,7 +27,7 @@ export function OfficerFeedbackModal({ isOpen, onClose, onSubmit, submitting }) 
     }
 
     onSubmit({
-      officerId: 'loan_officer_001',
+      officerId: effectiveOfficerId,
       category,
       feedback: feedback.trim(),
     });

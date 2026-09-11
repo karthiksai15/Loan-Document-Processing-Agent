@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.logging import logger
 from app.db.models import DocumentModel, LoanApplicationModel
+from app.services.storage_service import save_document_file, get_document_bytes, delete_document_file
 
 class DuplicateDocumentError(ValueError):
     """Raised when an identical file checksum already exists for the application."""
@@ -32,7 +33,8 @@ def upload_document(
     filename: str,
     content: bytes,
     document_type: str,
-    content_type: Optional[str] = None
+    content_type: Optional[str] = None,
+    uploaded_by: Optional[str] = None
 ) -> DocumentModel:
     """
     Validates, saves, and records an uploaded document for a loan application.
@@ -107,6 +109,16 @@ def upload_document(
     project_root = os.path.dirname(settings.DATA_DIR)
     rel_file_path = os.path.relpath(abs_file_path, project_root)
 
+    # 7. Persist document binary both to DB and disk cache
+    storage_key = save_document_file(
+        db=db,
+        document_id=doc_uuid,
+        content=content,
+        mime_type=mime,
+        stored_filename=stored_filename,
+        application_id=application_id
+    )
+
     # 8. Create DB record
     doc_obj = DocumentModel(
         document_id=doc_uuid,
@@ -118,7 +130,9 @@ def upload_document(
         mime_type=mime,
         file_size=file_size,
         checksum=checksum,
-        processing_status="UPLOADED"
+        processing_status="UPLOADED",
+        uploaded_by=uploaded_by,
+        storage_key=storage_key
     )
     db.add(doc_obj)
     db.commit()
@@ -148,9 +162,12 @@ def get_document_file_path(db: Session, document_id: str) -> Optional[Tuple[str,
     project_root = os.path.dirname(settings.DATA_DIR)
     abs_path = os.path.join(project_root, doc.file_path)
     
-    if not os.path.exists(abs_path):
-        logger.error(f"Document file missing on disk: {abs_path}")
-        return None
+    if not os.path.exists(abs_path) or os.path.getsize(abs_path) == 0:
+        # Attempt recovery from persistent database storage
+        recovered = get_document_bytes(db, document_id)
+        if not recovered:
+            logger.error(f"Document file missing on disk and persistent storage: {abs_path}")
+            return None
         
     return abs_path, doc.original_filename, doc.mime_type
 
@@ -163,14 +180,6 @@ def delete_document(db: Session, document_id: str) -> bool:
     doc.processing_status = "DELETED"
     db.commit()
     
-    # Remove physical file from disk if present
-    project_root = os.path.dirname(settings.DATA_DIR)
-    abs_path = os.path.join(project_root, doc.file_path)
-    if os.path.exists(abs_path):
-        try:
-            os.remove(abs_path)
-            logger.info(f"Deleted file on disk for document '{document_id}': {abs_path}")
-        except Exception as e:
-            logger.error(f"Failed to delete file on disk: {e}")
-            
+    # Remove binary from persistent storage and disk cache
+    delete_document_file(db, document_id)
     return True

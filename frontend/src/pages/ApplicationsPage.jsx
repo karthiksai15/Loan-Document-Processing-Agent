@@ -17,7 +17,7 @@ export function ApplicationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const [viewScope, setViewScope] = useState('DEMO'); // 'DEMO' | 'ALL'
+  const [viewScope, setViewScope] = useState('ALL'); // 'ALL' | 'CUSTOMER' | 'DEMO'
 
   const currentFilter = searchParams.get('filter') || 'ALL';
   const urlSearch = searchParams.get('search');
@@ -91,11 +91,9 @@ export function ApplicationsPage() {
 
   // Filter & search logic
   const filteredApps = applications.filter((app) => {
-    // Scope filter (demo vs all)
-    if (viewScope === 'DEMO') {
-      const isDemo = /^A0(0[1-9]|10)$/.test(app.application_id);
-      if (!isDemo) return false;
-    }
+    const isDemo = /^A0(0[1-9]|10)$/.test(app.application_id);
+    if (viewScope === 'DEMO' && !isDemo) return false;
+    if (viewScope === 'CUSTOMER' && isDemo) return false;
 
     if (currentFilter === 'REQUIRED') {
       if (app.human_review_status !== 'REQUIRED' && app.human_review_required !== true) return false;
@@ -110,10 +108,11 @@ export function ApplicationsPage() {
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toLowerCase();
       const matchId = app.application_id?.toLowerCase().includes(q);
+      const matchNum = app.application_number?.toLowerCase().includes(q);
       const matchName = app.applicant_name?.toLowerCase().includes(q);
       const matchEmployer = app.employer?.toLowerCase().includes(q);
       const matchIssue = getAppIssue(app).toLowerCase().includes(q);
-      return matchId || matchName || matchEmployer || matchIssue;
+      return matchId || matchNum || matchName || matchEmployer || matchIssue;
     }
 
     return true;
@@ -146,25 +145,9 @@ export function ApplicationsPage() {
 
       {error && <ErrorAlert message={error} onRetry={loadApplications} />}
 
-      {/* Scope Segmented Control (Demo Cases vs All) */}
+      {/* Scope Segmented Control (All vs Customer vs Demo) */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: '3px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-          <button
-            type="button"
-            className={`btn btn-sm ${viewScope === 'DEMO' ? 'btn-primary' : ''}`}
-            onClick={() => setViewScope('DEMO')}
-            style={{
-              fontSize: '0.775rem',
-              padding: '0.3rem 0.85rem',
-              borderRadius: 'var(--radius-sm)',
-              background: viewScope === 'DEMO' ? 'var(--color-primary-700)' : 'transparent',
-              color: viewScope === 'DEMO' ? '#ffffff' : 'var(--color-text-secondary)',
-              border: 'none',
-              boxShadow: viewScope === 'DEMO' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
-            }}
-          >
-            Demo Cases (A001–A010)
-          </button>
           <button
             type="button"
             className={`btn btn-sm ${viewScope === 'ALL' ? 'btn-primary' : ''}`}
@@ -180,6 +163,38 @@ export function ApplicationsPage() {
             }}
           >
             All Applications ({applications.length})
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm ${viewScope === 'CUSTOMER' ? 'btn-primary' : ''}`}
+            onClick={() => setViewScope('CUSTOMER')}
+            style={{
+              fontSize: '0.775rem',
+              padding: '0.3rem 0.85rem',
+              borderRadius: 'var(--radius-sm)',
+              background: viewScope === 'CUSTOMER' ? 'var(--color-primary-700)' : 'transparent',
+              color: viewScope === 'CUSTOMER' ? '#ffffff' : 'var(--color-text-secondary)',
+              border: 'none',
+              boxShadow: viewScope === 'CUSTOMER' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+            }}
+          >
+            Customer Applications
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm ${viewScope === 'DEMO' ? 'btn-primary' : ''}`}
+            onClick={() => setViewScope('DEMO')}
+            style={{
+              fontSize: '0.775rem',
+              padding: '0.3rem 0.85rem',
+              borderRadius: 'var(--radius-sm)',
+              background: viewScope === 'DEMO' ? 'var(--color-primary-700)' : 'transparent',
+              color: viewScope === 'DEMO' ? '#ffffff' : 'var(--color-text-secondary)',
+              border: 'none',
+              boxShadow: viewScope === 'DEMO' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+            }}
+          >
+            Demo Cases (A001–A010)
           </button>
         </div>
       </div>
@@ -257,7 +272,7 @@ export function ApplicationsPage() {
                       {app.applicant_name}
                     </div>
                     <div style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', color: 'var(--color-primary-700)' }}>
-                      {app.application_id}
+                      {app.application_number || app.application_id}
                     </div>
                   </td>
                   <td style={{ fontWeight: 600 }}>

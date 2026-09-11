@@ -11,6 +11,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import { StatusBadge } from '../Common/Badges';
 import { DecisionModal } from './DecisionModal';
 import { DocumentRequestModal } from './DocumentRequestModal';
@@ -19,6 +20,10 @@ import { ErrorAlert } from '../Common/ErrorAlert';
 import { formatDateTime } from '../../services/formatters';
 
 export function HumanReviewWorkspace({ applicationId, humanReview, onRefresh }) {
+  const { user } = useAuth();
+  const activeOfficerId = user?.id;
+  const isCustomer = user?.role === 'CUSTOMER';
+
   const [noteText, setNoteText] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   const [actionError, setActionError] = useState('');
@@ -40,7 +45,7 @@ export function HumanReviewWorkspace({ applicationId, humanReview, onRefresh }) 
     try {
       setSubmittingAction(true);
       setActionError('');
-      await api.acknowledgeReview(applicationId, 'loan_officer_001');
+      await api.acknowledgeReview(applicationId, activeOfficerId);
       setActionSuccess('Review successfully acknowledged. Status updated to IN_REVIEW.');
       setTimeout(() => setActionSuccess(''), 4000);
       if (onRefresh) onRefresh();
@@ -58,7 +63,7 @@ export function HumanReviewWorkspace({ applicationId, humanReview, onRefresh }) 
     try {
       setSavingNote(true);
       setActionError('');
-      await api.addOfficerNote(applicationId, 'loan_officer_001', noteText.trim());
+      await api.addOfficerNote(applicationId, activeOfficerId, noteText.trim());
       setNoteText('');
       setActionSuccess('Officer note added to review record.');
       setTimeout(() => setActionSuccess(''), 4000);
@@ -74,7 +79,7 @@ export function HumanReviewWorkspace({ applicationId, humanReview, onRefresh }) 
     try {
       setSubmittingAction(true);
       setActionError('');
-      await api.requestDocuments(applicationId, 'loan_officer_001', data.documents, data.reason);
+      await api.requestDocuments(applicationId, activeOfficerId, data.documents, data.reason);
       setDocModalOpen(false);
       setActionSuccess('Document request recorded and dispatched to applicant.');
       setTimeout(() => setActionSuccess(''), 4000);
@@ -90,7 +95,10 @@ export function HumanReviewWorkspace({ applicationId, humanReview, onRefresh }) 
     try {
       setSubmittingAction(true);
       setActionError('');
-      await api.recordHumanDecision(applicationId, payload);
+      await api.recordHumanDecision(applicationId, {
+        ...payload,
+        officerId: payload.officerId || activeOfficerId,
+      });
       setDecisionModalOpen(false);
       setActionSuccess(`Decision (${payload.decision}) successfully recorded by credit officer.`);
       setTimeout(() => setActionSuccess(''), 4000);
@@ -106,7 +114,10 @@ export function HumanReviewWorkspace({ applicationId, humanReview, onRefresh }) 
     try {
       setSubmittingAction(true);
       setActionError('');
-      await api.submitFeedback(applicationId, payload);
+      await api.submitFeedback(applicationId, {
+        ...payload,
+        officerId: payload.officerId || activeOfficerId,
+      });
       setFeedbackModalOpen(false);
       setActionSuccess('Officer feedback recorded successfully.');
       setTimeout(() => setActionSuccess(''), 4000);
@@ -191,7 +202,7 @@ export function HumanReviewWorkspace({ applicationId, humanReview, onRefresh }) 
             </p>
           )}
           <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>
-            Recorded by: {humanReview.reviewed_by || 'Officer Priya'} • {formatDateTime(humanReview.reviewed_at || humanReview.updated_at)}
+            Recorded by: {humanReview.reviewed_by || user?.name || 'Loan Officer'} • {formatDateTime(humanReview.reviewed_at || humanReview.updated_at)}
           </div>
         </div>
       )}
@@ -242,54 +253,70 @@ export function HumanReviewWorkspace({ applicationId, humanReview, onRefresh }) 
       )}
 
       {/* Action Bar */}
-      <div className="card" style={{ padding: '1.25rem' }}>
-        <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.75rem' }}>
-          Underwriting Actions
-        </h4>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-          {status === 'REQUIRED' && (
+      {isCustomer ? (
+        <div
+          className="card"
+          style={{
+            padding: '1rem',
+            textAlign: 'center',
+            fontSize: '0.825rem',
+            color: 'var(--color-text-secondary)',
+            background: 'var(--color-bg-subtle)',
+            border: '1px solid var(--color-border)',
+          }}
+        >
+          Underwriting review actions and credit decisions are restricted to bank loan officers.
+        </div>
+      ) : (
+        <div className="card" style={{ padding: '1.25rem' }}>
+          <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+            Underwriting Actions
+          </h4>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+            {status === 'REQUIRED' && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleAcknowledge}
+                disabled={submittingAction}
+              >
+                <UserCheck size={16} />
+                <span>Acknowledge Review (Start Investigation)</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setDecisionModalOpen(true)}
+              disabled={submittingAction}
+            >
+              <Award size={16} />
+              <span>Record Final Human Decision</span>
+            </button>
+
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={handleAcknowledge}
+              onClick={() => setDocModalOpen(true)}
               disabled={submittingAction}
             >
-              <UserCheck size={16} />
-              <span>Acknowledge Review (Start Investigation)</span>
+              <FileQuestion size={16} />
+              <span>Request Documents</span>
             </button>
-          )}
 
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => setDecisionModalOpen(true)}
-            disabled={submittingAction}
-          >
-            <Award size={16} />
-            <span>Record Final Human Decision</span>
-          </button>
-
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setDocModalOpen(true)}
-            disabled={submittingAction}
-          >
-            <FileQuestion size={16} />
-            <span>Request Documents</span>
-          </button>
-
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setFeedbackModalOpen(true)}
-            disabled={submittingAction}
-          >
-            <MessageSquare size={16} />
-            <span>Submit Officer Feedback</span>
-          </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setFeedbackModalOpen(true)}
+              disabled={submittingAction}
+            >
+              <MessageSquare size={16} />
+              <span>Submit Officer Feedback</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Officer Notes Form & History */}
       <div className="card">
@@ -300,22 +327,24 @@ export function HumanReviewWorkspace({ applicationId, humanReview, onRefresh }) 
         </div>
         <div className="card-body">
           {/* Note Input */}
-          <form onSubmit={handleAddNote} style={{ marginBottom: '1.25rem' }}>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="Add timestamped loan officer observation..."
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                style={{ flex: 1 }}
-              />
-              <button type="submit" className="btn btn-primary" disabled={savingNote || !noteText.trim()}>
-                <PlusCircle size={16} />
-                <span>{savingNote ? 'Saving...' : 'Add Note'}</span>
-              </button>
-            </div>
-          </form>
+          {!isCustomer && (
+            <form onSubmit={handleAddNote} style={{ marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Add timestamped loan officer observation..."
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  style={{ flex: 1 }}
+                />
+                <button type="submit" className="btn btn-primary" disabled={savingNote || !noteText.trim()}>
+                  <PlusCircle size={16} />
+                  <span>{savingNote ? 'Saving...' : 'Add Note'}</span>
+                </button>
+              </div>
+            </form>
+          )}
 
           {/* Notes History */}
           {notes.length > 0 ? (
@@ -378,6 +407,7 @@ export function HumanReviewWorkspace({ applicationId, humanReview, onRefresh }) 
         aiRecommendation={aiRecommendation}
         onConfirm={handleDecisionSubmit}
         submitting={submittingAction}
+        officerId={activeOfficerId}
       />
 
       <DocumentRequestModal
@@ -392,6 +422,7 @@ export function HumanReviewWorkspace({ applicationId, humanReview, onRefresh }) 
         onClose={() => setFeedbackModalOpen(false)}
         onSubmit={handleFeedbackSubmit}
         submitting={submittingAction}
+        officerId={activeOfficerId}
       />
     </div>
   );

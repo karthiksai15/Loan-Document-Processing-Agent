@@ -11,11 +11,12 @@ Endpoints:
   GET  /api/v1/applications/{application_id}/human-review/audit
 """
 
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.api.deps import check_officer_permission
 from app.schemas.human_review import (
     HumanReviewGateResponse,
     AcknowledgeReviewRequest,
@@ -47,6 +48,7 @@ router = APIRouter(prefix="/applications", tags=["Human Review"])
 def evaluate_human_review_endpoint(
     application_id: str,
     db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     try:
         record = human_review_service.evaluate_human_review_gate(
@@ -75,6 +77,7 @@ def evaluate_human_review_endpoint(
 def get_human_review_endpoint(
     application_id: str,
     db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     try:
         record = human_review_service.get_human_review(application_id=application_id, db=db)
@@ -100,11 +103,13 @@ def acknowledge_review_endpoint(
     application_id: str,
     request: AcknowledgeReviewRequest,
     db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     try:
+        officer_id = (current_officer.id if current_officer else None) or request.officer_id
         record = human_review_service.acknowledge_review(
             application_id=application_id,
-            officer_id=request.officer_id,
+            officer_id=officer_id,
             db=db,
         )
         return human_review_service.format_gate_response(record)
@@ -129,12 +134,14 @@ def add_officer_note_endpoint(
     application_id: str,
     request: OfficerNoteRequest,
     db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     try:
+        officer_id = (current_officer.id if current_officer else None) or request.officer_id
         record = human_review_service.add_officer_note(
             application_id=application_id,
             note_text=request.note,
-            officer_id=request.officer_id,
+            officer_id=officer_id,
             db=db,
         )
         return human_review_service.format_gate_response(record)
@@ -159,13 +166,15 @@ def request_documents_endpoint(
     application_id: str,
     request: RequestDocumentsRequest,
     db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     try:
+        officer_id = (current_officer.id if current_officer else None) or request.officer_id
         record = human_review_service.request_documents(
             application_id=application_id,
             documents=request.documents,
             reason=request.reason,
-            officer_id=request.officer_id,
+            officer_id=officer_id,
             db=db,
         )
         return human_review_service.format_gate_response(record)
@@ -193,12 +202,14 @@ def record_human_decision_endpoint(
     application_id: str,
     request: HumanDecisionRequest,
     db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     try:
+        officer_id = (current_officer.id if current_officer else None) or request.officer_id
         record = human_review_service.record_human_decision(
             application_id=application_id,
             decision=request.decision,
-            officer_id=request.officer_id,
+            officer_id=officer_id,
             db=db,
             override_reason=request.override_reason,
             notes=request.notes,
@@ -225,6 +236,7 @@ def record_human_decision_endpoint(
 def get_human_review_audit_endpoint(
     application_id: str,
     db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     try:
         events = human_review_service.get_audit_trail(application_id=application_id, db=db)
@@ -274,11 +286,13 @@ def add_feedback_endpoint(
     application_id: str,
     request: OfficerFeedbackRequest,
     db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     try:
+        officer_id = (current_officer.id if current_officer else None) or request.officer_id
         fb_dict = human_review_service.add_officer_feedback(
             application_id=application_id,
-            officer_id=request.officer_id,
+            officer_id=officer_id,
             feedback_text=request.feedback,
             category=request.category,
             db=db,
@@ -309,6 +323,7 @@ def add_feedback_endpoint(
 def get_decision_history_endpoint(
     application_id: str,
     db: Session = Depends(get_db),
+    current_officer=Depends(check_officer_permission),
 ):
     try:
         res = human_review_service.get_decision_history(application_id=application_id, db=db)

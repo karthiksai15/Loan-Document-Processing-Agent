@@ -495,7 +495,7 @@ def record_human_decision(
         clean_override_reason = (override_reason or decision_reason or "").strip()
         if not clean_override_reason:
             raise ValueError(
-                "Override reason is mandatory when human decision deviates from AI recommendation."
+                "Override reason is mandatory; decision reason is required when human decision deviates from AI recommendation."
             )
         new_status = "OVERRIDDEN"
         effective_reason = clean_override_reason
