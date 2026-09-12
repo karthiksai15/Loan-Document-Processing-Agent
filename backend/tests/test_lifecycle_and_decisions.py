@@ -126,7 +126,13 @@ def test_demo_data_seeding_and_idempotency():
         assert "message" in seed_data1
         assert "seeded_applications" in seed_data1
 
-        apps_res1 = client.get("/api/v1/applications", headers=headers)
+        # By default demo apps are excluded from production listings
+        apps_prod = client.get("/api/v1/applications", headers=headers)
+        assert apps_prod.status_code == 200
+        assert apps_prod.json()["total"] == 0
+
+        # With include_demo=true, all 10 demo applications are retrieved
+        apps_res1 = client.get("/api/v1/applications?include_demo=true", headers=headers)
         assert apps_res1.status_code == 200
         assert apps_res1.json()["total"] >= 10
 

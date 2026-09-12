@@ -101,7 +101,9 @@ def build_llm_context(
             doc_lines.append(f"  {f.field_name}: {f.normalized_value or f.raw_value} (confidence={f.confidence:.2f})")
 
         # Collect extracted text for injection scanning (untrusted)
-        if doc.extracted_text_path:
+        if doc.extracted_text:
+            all_injection_texts.append(doc.extracted_text[:3000])
+        elif doc.extracted_text_path:
             try:
                 with open(doc.extracted_text_path, "r", encoding="utf-8", errors="replace") as fh:
                     raw_text = fh.read(3000)

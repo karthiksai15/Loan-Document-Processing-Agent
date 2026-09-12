@@ -72,14 +72,18 @@ require_customer = require_role("CUSTOMER")
 def check_officer_permission(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)
-) -> Optional[UserModel]:
+) -> UserModel:
     """
-    Enforces that callers with a Bearer token have role LOAN_OFFICER or MANAGER.
+    Enforces that callers have a valid Bearer token with role LOAN_OFFICER or MANAGER.
+    Missing credentials -> 401 Unauthorized.
     CUSTOMER callers are strictly rejected with 403 Forbidden.
-    Unauthenticated callers without tokens (e.g. legacy test suite) are allowed for backward compatibility.
     """
     if credentials is None:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
 
     token = credentials.credentials
     payload = decode_access_token(token)

@@ -333,24 +333,40 @@ def evaluate_human_review_gate(
 
     db.flush()
 
-    # Log Audit Event
-    log_audit_event(
-        db=db,
-        application_id=application_id,
-        action="HUMAN_REVIEW_GATE_EVALUATED",
-        actor_type="SYSTEM",
-        actor_id="human_review_gate",
-        previous_status=None,
-        new_status=status,
-        note=f"Gate evaluated: required={is_required}, status={status}, confidence={confidence.score:.1f} ({confidence.level})",
-        details={
-            "confidence_score": confidence.score,
-            "confidence_level": confidence.level,
-            "reasons_count": len(reasons),
-            "reasons": reasons,
-            "ai_recommendation": ai_recommendation,
-        },
+    # Log Audit Event (idempotent: avoid duplicate events when evaluated with identical status and reasons)
+    latest_audit = (
+        db.query(HumanReviewAuditModel)
+        .filter(
+            HumanReviewAuditModel.application_id == application_id,
+            HumanReviewAuditModel.action == "HUMAN_REVIEW_GATE_EVALUATED"
+        )
+        .order_by(HumanReviewAuditModel.timestamp.desc())
+        .first()
     )
+    should_log = True
+    if latest_audit and latest_audit.new_status == status:
+        prev_reasons = (latest_audit.details or {}).get("reasons", [])
+        if prev_reasons == reasons:
+            should_log = False
+
+    if should_log:
+        log_audit_event(
+            db=db,
+            application_id=application_id,
+            action="HUMAN_REVIEW_GATE_EVALUATED",
+            actor_type="SYSTEM",
+            actor_id="human_review_gate",
+            previous_status=None,
+            new_status=status,
+            note=f"Gate evaluated: required={is_required}, status={status}, confidence={confidence.score:.1f} ({confidence.level})",
+            details={
+                "confidence_score": confidence.score,
+                "confidence_level": confidence.level,
+                "reasons_count": len(reasons),
+                "reasons": reasons,
+                "ai_recommendation": ai_recommendation,
+            },
+        )
     db.commit()
     return record
 

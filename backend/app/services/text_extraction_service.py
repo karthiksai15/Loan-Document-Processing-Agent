@@ -167,12 +167,28 @@ def extract_and_save_document_text(db: Session, document_id: str) -> DocumentMod
     project_root = os.path.dirname(settings.DATA_DIR)
     abs_file_path = os.path.join(project_root, doc.file_path)
 
-    # Check if already completed and text file exists (idempotent)
-    if doc.extraction_status == "COMPLETED" and doc.extracted_text_path:
-        abs_text_path = os.path.join(project_root, doc.extracted_text_path)
-        if os.path.exists(abs_text_path):
+    # Check if already completed and text exists (idempotent)
+    if doc.extraction_status == "COMPLETED":
+        if doc.extracted_text:
+            if doc.extracted_text_path:
+                abs_text_path = os.path.join(project_root, doc.extracted_text_path)
+                if not os.path.exists(abs_text_path):
+                    try:
+                        os.makedirs(os.path.dirname(abs_text_path), exist_ok=True)
+                        with open(abs_text_path, "w", encoding="utf-8") as f:
+                            f.write(doc.extracted_text)
+                    except Exception as e:
+                        logger.warning(f"Could not restore extracted text to disk: {e}")
             logger.info(f"Document '{document_id}' already extracted. Returning cached result.")
             return doc
+        elif doc.extracted_text_path:
+            abs_text_path = os.path.join(project_root, doc.extracted_text_path)
+            if os.path.exists(abs_text_path):
+                with open(abs_text_path, "r", encoding="utf-8", errors="replace") as f:
+                    doc.extracted_text = f.read()
+                db.commit()
+                logger.info(f"Document '{document_id}' already extracted. Returning cached result.")
+                return doc
 
     # Update status to PROCESSING
     doc.extraction_status = "PROCESSING"
@@ -194,6 +210,7 @@ def extract_and_save_document_text(db: Session, document_id: str) -> DocumentMod
         doc.extraction_status = "COMPLETED"
         doc.extraction_method = result.method
         doc.extracted_text_path = rel_target_path
+        doc.extracted_text = result.text
         doc.extracted_text_length = result.character_count
         doc.extraction_error = result.error
         doc.processed_at = datetime.utcnow()
@@ -215,12 +232,28 @@ def get_extracted_text_payload(db: Session, document_id: str) -> Dict[str, Any]:
         raise ValueError(f"Document '{document_id}' not found.")
 
     text_content = ""
-    if doc.extraction_status == "COMPLETED" and doc.extracted_text_path:
-        project_root = os.path.dirname(settings.DATA_DIR)
-        abs_text_path = os.path.join(project_root, doc.extracted_text_path)
-        if os.path.exists(abs_text_path):
-            with open(abs_text_path, "r", encoding="utf-8", errors="replace") as f:
-                text_content = f.read()
+    if doc.extraction_status == "COMPLETED":
+        if doc.extracted_text:
+            text_content = doc.extracted_text
+            # Re-materialize disk cache if missing
+            if doc.extracted_text_path:
+                project_root = os.path.dirname(settings.DATA_DIR)
+                abs_text_path = os.path.join(project_root, doc.extracted_text_path)
+                if not os.path.exists(abs_text_path):
+                    try:
+                        os.makedirs(os.path.dirname(abs_text_path), exist_ok=True)
+                        with open(abs_text_path, "w", encoding="utf-8") as f:
+                            f.write(doc.extracted_text)
+                    except Exception as e:
+                        logger.warning(f"Could not restore extracted text to disk: {e}")
+        elif doc.extracted_text_path:
+            project_root = os.path.dirname(settings.DATA_DIR)
+            abs_text_path = os.path.join(project_root, doc.extracted_text_path)
+            if os.path.exists(abs_text_path):
+                with open(abs_text_path, "r", encoding="utf-8", errors="replace") as f:
+                    text_content = f.read()
+                doc.extracted_text = text_content
+                db.commit()
 
     return {
         "document_id": doc.document_id,

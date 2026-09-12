@@ -99,6 +99,7 @@ def _enrich_application_response(db: Session, a) -> ApplicationResponse:
         primary_reason=assessment.primary_reason if assessment else None,
         human_review_required=h_review.human_review_required if h_review else (hr_status == "REQUIRED"),
         human_review_status=hr_status,
+        is_demo=getattr(a, "is_demo", False),
     )
 
 @router.get("/dashboard/overview", response_model=DashboardOverviewResponse)
@@ -148,7 +149,10 @@ def get_dashboard_overview_endpoint(
     )
 
 @router.post("/seed-demo-data")
-def seed_demo_data_endpoint(db: Session = Depends(get_db)):
+def seed_demo_data_endpoint(
+    db: Session = Depends(get_db),
+    current_officer: UserModel = Depends(check_officer_permission),
+):
     """Populates demo applications A001-A010 and runs analysis pipeline for instant review workspace testing."""
     import os
     from app.core.config import settings
@@ -198,11 +202,13 @@ def seed_demo_data_endpoint(db: Session = Depends(get_db)):
                     application_id=app_id,
                     applicant_name=applicant_name,
                     loan_amount=loan_amount,
-                )
+                ),
+                is_demo=True
             )
         else:
             app_obj.applicant_name = applicant_name
             app_obj.loan_amount = loan_amount
+            app_obj.is_demo = True
             db.commit()
 
         try:
@@ -265,11 +271,12 @@ def seed_demo_data_endpoint(db: Session = Depends(get_db)):
 
 @router.get("", response_model=ApplicationListResponse)
 def list_applications_endpoint(
+    include_demo: bool = False,
     db: Session = Depends(get_db),
     current_officer=Depends(check_officer_permission),
 ):
     """List all loan applications."""
-    apps = application_service.list_applications(db)
+    apps = application_service.list_applications(db, include_demo=include_demo)
     responses = [_enrich_application_response(db, a) for a in apps]
     return ApplicationListResponse(total=len(responses), applications=responses)
 

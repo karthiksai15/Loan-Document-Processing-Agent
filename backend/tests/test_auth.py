@@ -115,15 +115,35 @@ def test_google_auth_new_officer_with_role_preference(mock_verify):
         "iss": "https://accounts.google.com"
     }
 
-    # 1. Any Gmail user selecting LOAN_OFFICER receives LOAN_OFFICER role
-    resp = client.post("/api/v1/auth/google", json={
-        "id_token": "mock-officer-token",
+    # 1. Allowlisted staff email receives LOAN_OFFICER role
+    with patch.object(settings, "LOAN_OFFICER_EMAILS", mock_email):
+        resp = client.post("/api/v1/auth/google", json={
+            "id_token": "mock-officer-token",
+            "role": "LOAN_OFFICER"
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["user"]["role"] == "LOAN_OFFICER"
+        assert data["user"]["email"] == mock_email
+
+    # 1b. Non-allowlisted email requesting LOAN_OFFICER is blocked from escalation and receives CUSTOMER
+    google_sub_unauth = f"google-sub-{uuid.uuid4().hex[:8]}"
+    unauth_email = f"unauth_{uuid.uuid4().hex[:6]}@gmail.com"
+    mock_verify.return_value = {
+        "sub": google_sub_unauth,
+        "email": unauth_email,
+        "name": "Unauth User",
+        "picture": "https://lh3.googleusercontent.com/a/unauth",
+        "email_verified": True,
+        "aud": settings.GOOGLE_CLIENT_ID,
+        "iss": "https://accounts.google.com"
+    }
+    resp_unauth = client.post("/api/v1/auth/google", json={
+        "id_token": "mock-unauth-token",
         "role": "LOAN_OFFICER"
     })
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["user"]["role"] == "LOAN_OFFICER"
-    assert data["user"]["email"] == mock_email
+    assert resp_unauth.status_code == 200
+    assert resp_unauth.json()["user"]["role"] == "CUSTOMER"
 
     # 2. Gmail user selecting CUSTOMER receives CUSTOMER role
     google_sub_2 = f"google-sub-{uuid.uuid4().hex[:8]}"
@@ -392,27 +412,28 @@ def test_gmail_staff_login(mock_verify):
         "iss": "https://accounts.google.com"
     }
 
-    resp = client.post("/api/v1/auth/google", json={
-        "id_token": "token-staff",
-        "role": "LOAN_OFFICER"
-    })
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["user"]["role"] == "LOAN_OFFICER"
-    assert data["user"]["email"] == email
+    with patch.object(settings, "LOAN_OFFICER_EMAILS", email):
+        resp = client.post("/api/v1/auth/google", json={
+            "id_token": "token-staff",
+            "role": "LOAN_OFFICER"
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["user"]["role"] == "LOAN_OFFICER"
+        assert data["user"]["email"] == email
 
-    # Verify JWT role claim is LOAN_OFFICER
-    decoded = decode_access_token(data["access_token"])
-    assert decoded["role"] == "LOAN_OFFICER"
+        # Verify JWT role claim is LOAN_OFFICER
+        decoded = decode_access_token(data["access_token"])
+        assert decoded["role"] == "LOAN_OFFICER"
 
-    # Verify database persistence
-    db = SessionLocal()
-    try:
-        user_db = db.query(UserModel).filter(UserModel.id == data["user"]["id"]).first()
-        assert user_db is not None
-        assert user_db.role == "LOAN_OFFICER"
-    finally:
-        db.close()
+        # Verify database persistence
+        db = SessionLocal()
+        try:
+            user_db = db.query(UserModel).filter(UserModel.id == data["user"]["id"]).first()
+            assert user_db is not None
+            assert user_db.role == "LOAN_OFFICER"
+        finally:
+            db.close()
 
 
 @patch("app.services.auth_service.google_id_token.verify_oauth2_token")
@@ -439,31 +460,33 @@ def test_multiple_different_gmail_staff_accounts_see_all_applications(mock_verif
     finally:
         db.close()
 
-    # Staff 1 login
     email_1 = f"team_lead_{uuid.uuid4().hex[:6]}@gmail.com"
-    mock_verify.return_value = {
-        "sub": f"sub-{uuid.uuid4().hex[:8]}",
-        "email": email_1,
-        "name": "Team Lead",
-        "email_verified": True,
-        "aud": settings.GOOGLE_CLIENT_ID,
-        "iss": "https://accounts.google.com"
-    }
-    resp1 = client.post("/api/v1/auth/google", json={"id_token": "tok1", "role": "LOAN_OFFICER"})
-    tok1 = resp1.json()["access_token"]
-
-    # Staff 2 login
     email_2 = f"reviewer_{uuid.uuid4().hex[:6]}@gmail.com"
-    mock_verify.return_value = {
-        "sub": f"sub-{uuid.uuid4().hex[:8]}",
-        "email": email_2,
-        "name": "Reviewer Staff",
-        "email_verified": True,
-        "aud": settings.GOOGLE_CLIENT_ID,
-        "iss": "https://accounts.google.com"
-    }
-    resp2 = client.post("/api/v1/auth/google", json={"id_token": "tok2", "role": "LOAN_OFFICER"})
-    tok2 = resp2.json()["access_token"]
+
+    with patch.object(settings, "LOAN_OFFICER_EMAILS", f"{email_1},{email_2}"):
+        # Staff 1 login
+        mock_verify.return_value = {
+            "sub": f"sub-{uuid.uuid4().hex[:8]}",
+            "email": email_1,
+            "name": "Team Lead",
+            "email_verified": True,
+            "aud": settings.GOOGLE_CLIENT_ID,
+            "iss": "https://accounts.google.com"
+        }
+        resp1 = client.post("/api/v1/auth/google", json={"id_token": "tok1", "role": "LOAN_OFFICER"})
+        tok1 = resp1.json()["access_token"]
+
+        # Staff 2 login
+        mock_verify.return_value = {
+            "sub": f"sub-{uuid.uuid4().hex[:8]}",
+            "email": email_2,
+            "name": "Reviewer Staff",
+            "email_verified": True,
+            "aud": settings.GOOGLE_CLIENT_ID,
+            "iss": "https://accounts.google.com"
+        }
+        resp2 = client.post("/api/v1/auth/google", json={"id_token": "tok2", "role": "LOAN_OFFICER"})
+        tok2 = resp2.json()["access_token"]
 
     # Both staff can list applications and see all
     res_staff1 = client.get("/api/v1/applications", headers={"Authorization": f"Bearer {tok1}"})

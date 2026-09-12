@@ -341,8 +341,9 @@ def test_customer_cannot_perform_officer_review(customer_user, officer_user):
 # 6. Officer Access to Customer Applications & Demo Apps
 # ---------------------------------------------------------------------------
 
-def test_officer_view_customer_app_by_number(customer_user):
+def test_officer_view_customer_app_by_number(customer_user, officer_user):
     cust_token = customer_user["token"]
+    off_token = officer_user["token"]
 
     resp_app = client.post(
         "/api/v1/customer/applications",
@@ -357,12 +358,22 @@ def test_officer_view_customer_app_by_number(customer_user):
     app_num = resp_app.json()["application_number"]
 
     # Officer can lookup via application_number
-    get_by_num = client.get(f"/api/v1/applications/{app_num}")
+    get_by_num = client.get(
+        f"/api/v1/applications/{app_num}",
+        headers={"Authorization": f"Bearer {off_token}"}
+    )
     assert get_by_num.status_code == 200
     assert get_by_num.json()["application_number"] == app_num
 
     # Demo cases (e.g. A001) remain accessible
-    client.post("/api/v1/applications", json={"application_id": "A001", "applicant_name": "Aarav Sharma", "loan_amount": 1000000.0})
-    get_demo = client.get("/api/v1/applications/A001")
+    client.post(
+        "/api/v1/applications",
+        json={"application_id": "A001", "applicant_name": "Aarav Sharma", "loan_amount": 1000000.0},
+        headers={"Authorization": f"Bearer {off_token}"}
+    )
+    get_demo = client.get(
+        "/api/v1/applications/A001",
+        headers={"Authorization": f"Bearer {off_token}"}
+    )
     assert get_demo.status_code == 200
     assert get_demo.json()["applicant_name"] == "Aarav Sharma"

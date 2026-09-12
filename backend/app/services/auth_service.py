@@ -131,41 +131,31 @@ def decode_access_token(token: str) -> Dict[str, Any]:
 
 def determine_user_role(email: str, role_preference: Optional[str] = None) -> str:
     """
-    Determines user role based on email allowlists and portal selection.
+    Determines user role strictly based on verified email allowlists.
     
     1. If email is in MANAGER_EMAILS -> MANAGER
     2. If email is in LOAN_OFFICER_EMAILS -> LOAN_OFFICER
-    3. If role_preference is specified:
-       - 'LOAN_OFFICER', 'OFFICER' -> LOAN_OFFICER
-       - 'MANAGER' -> MANAGER
-       - 'CUSTOMER' -> CUSTOMER
-    4. Default -> CUSTOMER
+    3. All other users -> CUSTOMER
+    
+    The client-supplied role_preference is NEVER trusted to grant staff access.
     """
     email_clean = (email or "").strip().lower()
-    manager_emails = [
-        e.strip().lower()
-        for e in getattr(settings, "MANAGER_EMAILS", "").split(",")
-        if e.strip()
-    ]
-    officer_emails = [
-        e.strip().lower()
-        for e in getattr(settings, "LOAN_OFFICER_EMAILS", "").split(",")
-        if e.strip()
-    ]
+    raw_mgr = getattr(settings, "MANAGER_EMAILS", "")
+    if isinstance(raw_mgr, (list, tuple, set)):
+        manager_emails = [str(e).strip().lower() for e in raw_mgr if str(e).strip()]
+    else:
+        manager_emails = [e.strip().lower() for e in str(raw_mgr or "").split(",") if e.strip()]
 
-    if email_clean in manager_emails:
+    raw_off = getattr(settings, "LOAN_OFFICER_EMAILS", "")
+    if isinstance(raw_off, (list, tuple, set)):
+        officer_emails = [str(e).strip().lower() for e in raw_off if str(e).strip()]
+    else:
+        officer_emails = [e.strip().lower() for e in str(raw_off or "").split(",") if e.strip()]
+
+    if manager_emails and email_clean in manager_emails:
         return "MANAGER"
-    if email_clean in officer_emails:
+    if officer_emails and email_clean in officer_emails:
         return "LOAN_OFFICER"
-
-    if role_preference:
-        pref = role_preference.strip().upper()
-        if pref in ("LOAN_OFFICER", "OFFICER"):
-            return "LOAN_OFFICER"
-        elif pref == "MANAGER":
-            return "MANAGER"
-        elif pref == "CUSTOMER":
-            return "CUSTOMER"
 
     return "CUSTOMER"
 
@@ -178,6 +168,7 @@ def authenticate_google_user(
     """
     Verifies Google ID token, finds or creates the user in the database,
     and returns (user, jwt_access_token).
+    Staff roles are strictly bound to verified email allowlists.
     """
     id_info = verify_google_id_token(id_token_str)
 
@@ -192,8 +183,8 @@ def authenticate_google_user(
             detail="Google profile is missing required identity fields"
         )
 
-    # Determine assigned role based on configuration or portal selection
-    target_role = determine_user_role(email, role_preference)
+    # Determine assigned role based strictly on authoritative email allowlists
+    authorized_role = determine_user_role(email, role_preference)
 
     # 1. Check if user exists by google_id
     user = db.query(UserModel).filter(UserModel.google_id == google_id).first()
@@ -205,10 +196,15 @@ def authenticate_google_user(
             # Link google_id to existing user account
             user.google_id = google_id
 
-    # 3. Existing user update profile info and role if explicitly requested
+    # 3. Existing user update profile info and synchronize authorized role
     if user:
-        if role_preference and user.role != target_role:
-            user.role = target_role
+        # Synchronize role with authoritative allowlists
+        # Allowlisted staff receive their authorized role
+        # Non-staff users must remain or become CUSTOMER (preventing escalation)
+        if user.role != authorized_role:
+            logger.info(f"Synchronizing role for user {user.id} ({user.email}) from {user.role} to {authorized_role}")
+            user.role = authorized_role
+
         if picture_url and user.picture_url != picture_url:
             user.picture_url = picture_url
         if name and user.name != name:
@@ -217,7 +213,7 @@ def authenticate_google_user(
         db.commit()
         db.refresh(user)
     else:
-        # 4. Create new user with assigned role
+        # 4. Create new user with authorized role
         user_id = f"usr_{uuid.uuid4().hex[:12]}"
         now = datetime.utcnow()
         user = UserModel(
@@ -226,7 +222,7 @@ def authenticate_google_user(
             name=name,
             google_id=google_id,
             picture_url=picture_url,
-            role=target_role,
+            role=authorized_role,
             created_at=now,
             updated_at=now
         )

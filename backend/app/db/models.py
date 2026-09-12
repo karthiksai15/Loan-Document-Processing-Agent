@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from sqlalchemy import String, Integer, Float, DateTime, ForeignKey, Text, JSON, LargeBinary
+from sqlalchemy import String, Integer, Float, DateTime, ForeignKey, Text, JSON, LargeBinary, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
@@ -14,6 +14,7 @@ class LoanApplicationModel(Base):
     income_annum: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     loan_amount: Mapped[float] = mapped_column(Float, default=0.0)
     status: Mapped[str] = mapped_column(String(50), default="PENDING")
+    is_demo: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     
     # Verification Metadata (Phase 9)
     verification_status: Mapped[str] = mapped_column(String(50), default="NOT_VERIFIED")  # NOT_VERIFIED, VERIFYING, COMPLETED, FAILED
@@ -87,6 +88,7 @@ class DocumentModel(Base):
     extraction_status: Mapped[str] = mapped_column(String(50), default="NOT_PROCESSED")  # NOT_PROCESSED, PROCESSING, COMPLETED, FAILED
     extraction_method: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # TEXT, PDF_TEXT, OCR
     extracted_text_path: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    extracted_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     extracted_text_length: Mapped[int] = mapped_column(Integer, default=0)
     extraction_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)

@@ -270,10 +270,10 @@ export function AIReviewDrawer({
           <Sparkles size={16} color="var(--color-primary-600)" />
           <span>AI Decision Support System</span>
           <span
-            className="badge badge-neutral"
+            className={`badge ${running ? 'badge-medium' : error ? 'badge-high' : 'badge-neutral'}`}
             style={{ fontSize: '0.675rem', padding: '0.1rem 0.4rem' }}
           >
-            {investigationStatus}
+            {running ? 'PROCESSING' : error ? 'FAILED' : investigationStatus}
           </span>
         </div>
         <button
@@ -292,15 +292,35 @@ export function AIReviewDrawer({
         <div
           style={{
             marginBottom: '1rem',
-            padding: '0.75rem',
+            padding: '0.75rem 1rem',
             background: '#fef2f2',
             border: '1px solid #fecaca',
             borderRadius: 'var(--radius-md)',
             color: '#991b1b',
             fontSize: '0.825rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.5rem',
           }}
         >
-          {error}
+          <div>
+            <strong>AI Review Failed:</strong> {error}
+            <div style={{ fontSize: '0.75rem', color: '#b91c1c', marginTop: '0.2rem' }}>
+              Data displayed below reflects previous cached state.
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => handleRunReview(true)}
+            disabled={running}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+          >
+            <RefreshCw size={12} className={running ? 'animate-spin' : ''} />
+            <span>Retry</span>
+          </button>
         </div>
       )}
 

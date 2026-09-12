@@ -34,6 +34,7 @@ class ApplicationResponse(BaseModel):
     primary_reason: Optional[str] = None
     human_review_required: Optional[bool] = None
     human_review_status: Optional[str] = None
+    is_demo: bool = False
 
 class ApplicationListResponse(BaseModel):
     total: int

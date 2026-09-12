@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.db.models import LoanApplicationModel
 from app.schemas.application import ApplicationCreate
 
-def create_application(db: Session, data: ApplicationCreate) -> LoanApplicationModel:
+def create_application(db: Session, data: ApplicationCreate, is_demo: bool = False) -> LoanApplicationModel:
     app_id = data.application_id or f"APP-{uuid.uuid4().hex[:8].upper()}"
     
     # Check if application_id already exists
@@ -16,7 +16,8 @@ def create_application(db: Session, data: ApplicationCreate) -> LoanApplicationM
         application_id=app_id,
         applicant_name=data.applicant_name,
         loan_amount=data.loan_amount or 0.0,
-        status="PENDING"
+        status="PENDING",
+        is_demo=is_demo,
     )
     db.add(app_obj)
     db.commit()
@@ -33,5 +34,8 @@ def get_application(db: Session, application_id: str) -> Optional[LoanApplicatio
         .first()
     )
 
-def list_applications(db: Session) -> List[LoanApplicationModel]:
-    return db.query(LoanApplicationModel).order_by(LoanApplicationModel.created_at.desc()).all()
+def list_applications(db: Session, include_demo: bool = False) -> List[LoanApplicationModel]:
+    query = db.query(LoanApplicationModel)
+    if not include_demo:
+        query = query.filter(LoanApplicationModel.is_demo == False)
+    return query.order_by(LoanApplicationModel.created_at.desc()).all()

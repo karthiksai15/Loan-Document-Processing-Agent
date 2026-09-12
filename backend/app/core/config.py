@@ -1,5 +1,6 @@
 import os
 from typing import Literal, Optional
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 def _find_default_data_dir() -> str:
@@ -90,5 +91,19 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore"
     )
+
+    @model_validator(mode="after")
+    def validate_production_jwt_secret(self) -> "Settings":
+        is_prod_env = (
+            os.getenv("ENVIRONMENT", "").lower() in ("production", "prod") or
+            os.getenv("RENDER") is not None or
+            ("neon.tech" in self.DATABASE_URL.lower() or "amazonaws.com" in self.DATABASE_URL.lower())
+        )
+        if is_prod_env and self.JWT_SECRET_KEY == "genbank-jwt-dev-secret-key-change-in-production":
+            raise RuntimeError(
+                "CRITICAL SECURITY CONFIGURATION ERROR: Default JWT_SECRET_KEY is not permitted in production. "
+                "Please set a secure JWT_SECRET_KEY in your production environment variables."
+            )
+        return self
 
 settings = Settings()

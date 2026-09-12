@@ -166,7 +166,7 @@ def classify_document(db: Session, document_id: str) -> DocumentModel:
     if not doc or doc.processing_status == "DELETED":
         raise ValueError(f"Document '{document_id}' not found.")
 
-    if doc.extraction_status != "COMPLETED" or not doc.extracted_text_path:
+    if doc.extraction_status != "COMPLETED" or (not doc.extracted_text_path and not doc.extracted_text):
         raise ValueError(f"Text for document '{document_id}' has not been extracted yet. Please execute /extract-text prior to classification.")
 
     # Check if already classified (idempotent)
@@ -177,13 +177,15 @@ def classify_document(db: Session, document_id: str) -> DocumentModel:
     doc.classification_status = "CLASSIFYING"
     db.commit()
 
-    project_root = os.path.dirname(settings.DATA_DIR)
-    abs_text_path = os.path.join(project_root, doc.extracted_text_path)
-
     text_content = ""
-    if os.path.exists(abs_text_path):
-        with open(abs_text_path, "r", encoding="utf-8", errors="replace") as f:
-            text_content = f.read()
+    if doc.extracted_text:
+        text_content = doc.extracted_text
+    elif doc.extracted_text_path:
+        project_root = os.path.dirname(settings.DATA_DIR)
+        abs_text_path = os.path.join(project_root, doc.extracted_text_path)
+        if os.path.exists(abs_text_path):
+            with open(abs_text_path, "r", encoding="utf-8", errors="replace") as f:
+                text_content = f.read()
 
     result = classify_text(text_content)
 

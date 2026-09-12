@@ -50,6 +50,14 @@ try:
                 conn.execute(text("ALTER TABLE applications ADD COLUMN application_number VARCHAR(100)"))
             if "user_id" not in app_cols:
                 conn.execute(text("ALTER TABLE applications ADD COLUMN user_id VARCHAR(100)"))
+            if "is_demo" not in app_cols:
+                conn.execute(text("ALTER TABLE applications ADD COLUMN is_demo BOOLEAN DEFAULT FALSE"))
+            conn.execute(text("""
+                UPDATE applications 
+                SET is_demo = TRUE 
+                WHERE application_id IN ('A001', 'A002', 'A003', 'A004', 'A005', 'A006', 'A007', 'A008', 'A009', 'A010')
+                   OR application_number IN ('A001', 'A002', 'A003', 'A004', 'A005', 'A006', 'A007', 'A008', 'A009', 'A010')
+            """))
             conn.commit()
     if "documents" in inspector.get_table_names():
         doc_cols = {c["name"] for c in inspector.get_columns("documents")}
@@ -58,6 +66,8 @@ try:
                 conn.execute(text("ALTER TABLE documents ADD COLUMN uploaded_by VARCHAR(100)"))
             if "storage_key" not in doc_cols:
                 conn.execute(text("ALTER TABLE documents ADD COLUMN storage_key VARCHAR(255)"))
+            if "extracted_text" not in doc_cols:
+                conn.execute(text("ALTER TABLE documents ADD COLUMN extracted_text TEXT"))
             conn.commit()
     if not settings.DATABASE_URL.startswith("sqlite"):
         with engine.connect() as conn:

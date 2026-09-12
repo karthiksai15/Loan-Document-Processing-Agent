@@ -90,6 +90,40 @@ export function AIReviewTab({ applicationId, agentReview, onRefresh }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {error && (
+        <div
+          style={{
+            padding: '1rem 1.25rem',
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: 'var(--radius-md)',
+            color: '#991b1b',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+            <AlertTriangle size={18} color="#dc2626" />
+            <span>
+              <strong>AI Review Execution Failed:</strong> {error}. The review shown below reflects previously cached data.
+            </span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm btn-primary"
+            onClick={() => handleRunReview(true)}
+            disabled={running}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+          >
+            <RotateCw size={13} className={running ? 'animate-spin' : ''} />
+            <span>Retry Investigation</span>
+          </button>
+        </div>
+      )}
+
       {/* AI Recommendation Banner */}
       <div
         className="card"
@@ -120,9 +154,9 @@ export function AIReviewTab({ applicationId, agentReview, onRefresh }) {
               <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
                 Status
               </div>
-              <span className={`badge ${running ? 'badge-medium' : 'badge-low'}`}>
+              <span className={`badge ${running ? 'badge-medium' : error ? 'badge-high' : 'badge-low'}`}>
                 <span className="badge-dot" />
-                <span>{running ? 'PROCESSING' : (currentAgentReview?.investigation_status || 'COMPLETED')}</span>
+                <span>{running ? 'PROCESSING' : error ? 'FAILED' : (currentAgentReview?.investigation_status || 'COMPLETED')}</span>
               </span>
             </div>
 
