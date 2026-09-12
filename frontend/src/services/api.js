@@ -54,9 +54,11 @@ export const api = {
   getSystemInfo: () => apiClient.get('/system/info'),
 
   // Dashboard & Application listing
-  getDashboardOverview: () => apiClient.get('/applications/dashboard/overview'),
+  getDashboardOverview: (includeDemo = true) =>
+    apiClient.get('/applications/dashboard/overview', { params: { include_demo: includeDemo } }),
   seedDemoData: () => apiClient.post('/applications/seed-demo-data'),
-  getApplications: () => apiClient.get('/applications'),
+  getApplications: (includeDemo = true) =>
+    apiClient.get('/applications', { params: { include_demo: includeDemo } }),
   getApplication: (appId) => apiClient.get(`/applications/${appId}`),
 
   // Verification & Evidence Graph

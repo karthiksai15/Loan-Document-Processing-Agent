@@ -109,17 +109,8 @@ def upload_document(
     project_root = os.path.dirname(settings.DATA_DIR)
     rel_file_path = os.path.relpath(abs_file_path, project_root)
 
-    # 7. Persist document binary both to DB and disk cache
-    storage_key = save_document_file(
-        db=db,
-        document_id=doc_uuid,
-        content=content,
-        mime_type=mime,
-        stored_filename=stored_filename,
-        application_id=application_id
-    )
-
-    # 8. Create DB record
+    # 7. Create DB record for parent DocumentModel first
+    storage_key = f"db://document_files/{doc_uuid}"
     doc_obj = DocumentModel(
         document_id=doc_uuid,
         application_id=application_id,
@@ -134,9 +125,32 @@ def upload_document(
         uploaded_by=uploaded_by,
         storage_key=storage_key
     )
-    db.add(doc_obj)
-    db.commit()
-    db.refresh(doc_obj)
+
+    try:
+        db.add(doc_obj)
+        db.flush()  # Ensures documents row exists in DB transaction before child document_files insertion
+
+        # 8. Persist document binary both to DB and disk cache
+        save_document_file(
+            db=db,
+            document_id=doc_uuid,
+            content=content,
+            mime_type=mime,
+            stored_filename=stored_filename,
+            application_id=application_id
+        )
+
+        db.commit()
+        db.refresh(doc_obj)
+    except Exception:
+        db.rollback()
+        if os.path.exists(abs_file_path):
+            try:
+                os.remove(abs_file_path)
+            except Exception:
+                pass
+        raise
+
 
     logger.info(f"Document '{doc_uuid}' ({safe_filename}) uploaded successfully for application '{application_id}'.")
     return doc_obj

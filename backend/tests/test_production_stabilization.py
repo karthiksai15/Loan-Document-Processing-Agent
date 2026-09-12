@@ -7,11 +7,13 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.core.config import Settings, settings
+import io
 from app.db.session import SessionLocal
 from app.db.models import (
     UserModel,
     LoanApplicationModel,
     DocumentModel,
+    DocumentFileModel,
     HumanReviewAuditModel,
     HumanReviewModel,
 )
@@ -20,6 +22,7 @@ from app.services.auth_service import (
     determine_user_role,
     authenticate_google_user,
 )
+from app.services import document_service
 from app.services.human_review_service import evaluate_human_review_gate
 from app.services.document_classification_service import classify_document
 from app.services.field_extraction_service import extract_and_save_fields
@@ -512,3 +515,200 @@ def test_evaluate_human_review_gate_idempotent_audit_trail(db_session):
     ).count()
     # Must remain 1, not duplicate
     assert audit_count_2 == 1
+
+
+# ---------------------------------------------------------------------------
+# Test 10: Document Upload Foreign Key Integrity & Lifecycle Regressions (P0)
+# ---------------------------------------------------------------------------
+
+def test_authenticated_customer_can_upload_document_successfully(customer_a_auth, db_session):
+    """
+    Regression Test 10a & 10b:
+    1. Authenticated customer uploads a document to their own application.
+    2. Document row MUST exist in DB before DocumentFile row is created.
+    3. Document and DocumentFile foreign key relationship is strictly satisfied.
+    """
+    headers = customer_a_auth["headers"]
+    cust_id = customer_a_auth["user"].id
+
+    # Create draft application for Customer A
+    resp_app = client.post(
+        "/api/v1/customer/applications",
+        json={
+            "applicant_name": "Customer A Upload Test",
+            "loan_amount": 350000.0,
+            "income_annum": 600000.0,
+        },
+        headers=headers,
+    )
+    assert resp_app.status_code == 201
+    app_id = resp_app.json()["application_id"]
+
+    # Upload document
+    test_content = b"%PDF-1.4 Mock Payslip content for Customer A"
+    files = {"file": ("payslip_cust_a.pdf", io.BytesIO(test_content), "application/pdf")}
+    data = {"document_type": "PAYSLIP"}
+
+    upload_resp = client.post(
+        f"/api/v1/customer/applications/{app_id}/documents",
+        files=files,
+        data=data,
+        headers=headers,
+    )
+    assert upload_resp.status_code == 201
+    doc_id = upload_resp.json()["document_id"]
+    assert doc_id.startswith("DOC-")
+
+    # Verify parent Document row exists in DB
+    parent_doc = db_session.query(DocumentModel).filter(DocumentModel.document_id == doc_id).first()
+    assert parent_doc is not None
+    assert parent_doc.application_id == app_id
+    assert parent_doc.uploaded_by == cust_id
+    assert parent_doc.document_type == "PAYSLIP"
+
+    # Verify child DocumentFile row exists and references parent Document
+    child_file = db_session.query(DocumentFileModel).filter(DocumentFileModel.document_id == doc_id).first()
+    assert child_file is not None
+    assert child_file.file_content == test_content
+    assert child_file.file_size == len(test_content)
+
+    # Verify ORM relationship traversal
+    assert parent_doc.file_record is not None
+    assert parent_doc.file_record.document_id == doc_id
+    assert child_file.document.document_id == doc_id
+
+
+def test_uploaded_file_can_subsequently_be_retrieved(customer_a_auth, db_session):
+    """
+    Regression Test 10c:
+    Uploaded file can be retrieved via storage service and downloaded via API.
+    """
+    headers = customer_a_auth["headers"]
+
+    # Create draft application
+    resp_app = client.post(
+        "/api/v1/customer/applications",
+        json={"applicant_name": "Retrieval Test", "loan_amount": 200000.0},
+        headers=headers,
+    )
+    assert resp_app.status_code == 201
+    app_id = resp_app.json()["application_id"]
+
+    # Upload document
+    test_bytes = b"Hello GenBank Underwriting - retrieval test bytes"
+    files = {"file": ("bank_statement_retrieval.txt", io.BytesIO(test_bytes), "text/plain")}
+    data = {"document_type": "BANK_STATEMENT"}
+
+    upload_resp = client.post(
+        f"/api/v1/customer/applications/{app_id}/documents",
+        files=files,
+        data=data,
+        headers=headers,
+    )
+    assert upload_resp.status_code == 201
+    doc_id = upload_resp.json()["document_id"]
+
+    # Retrieve via storage service
+    retrieved_bytes, mime = document_service.get_document_bytes(db_session, doc_id)
+    assert retrieved_bytes == test_bytes
+
+    # Retrieve via API download endpoint
+    dl_resp = client.get(f"/api/v1/documents/{doc_id}/download", headers=headers)
+    assert dl_resp.status_code == 200
+    assert dl_resp.content == test_bytes
+
+
+def test_unauthorized_customer_cannot_upload_to_another_customer_application(customer_a_auth, customer_b_auth):
+    """
+    Regression Test 10d:
+    Customer B attempts to upload a document to Customer A's application -> 403 Forbidden.
+    """
+    headers_a = customer_a_auth["headers"]
+    headers_b = customer_b_auth["headers"]
+
+    # Customer A creates an application
+    resp_app = client.post(
+        "/api/v1/customer/applications",
+        json={"applicant_name": "Customer A App", "loan_amount": 400000.0},
+        headers=headers_a,
+    )
+    assert resp_app.status_code == 201
+    app_id_a = resp_app.json()["application_id"]
+
+    # Customer B attempts to upload document to Customer A's application
+    files = {"file": ("attack_doc.pdf", io.BytesIO(b"Malicious payload"), "application/pdf")}
+    data = {"document_type": "PAYSLIP"}
+
+    resp_hack = client.post(
+        f"/api/v1/customer/applications/{app_id_a}/documents",
+        files=files,
+        data=data,
+        headers=headers_b,
+    )
+    assert resp_hack.status_code == 403
+    assert "access denied" in resp_hack.json()["detail"].lower()
+
+
+def test_invalid_application_or_document_requests_return_correct_error(customer_a_auth):
+    """
+    Regression Test 10e:
+    Invalid requests return correct HTTP error codes:
+    - Nonexistent application -> 404
+    - Missing filename / empty file -> 400
+    - Unsupported file extension -> 400
+    - Invalid document category -> 400
+    """
+    headers = customer_a_auth["headers"]
+
+    # 1. Nonexistent application -> 404
+    files = {"file": ("doc.pdf", io.BytesIO(b"some content"), "application/pdf")}
+    data = {"document_type": "PAYSLIP"}
+    resp = client.post(
+        "/api/v1/customer/applications/GEN-NONEXISTENT-999999/documents",
+        files=files,
+        data=data,
+        headers=headers,
+    )
+    assert resp.status_code == 404
+
+    # Create valid app for remaining validation tests
+    resp_app = client.post(
+        "/api/v1/customer/applications",
+        json={"applicant_name": "Validation Target", "loan_amount": 100000.0},
+        headers=headers,
+    )
+    app_id = resp_app.json()["application_id"]
+
+    # 2. Unsupported file extension (.exe) -> 400
+    files_bad_ext = {"file": ("malware.exe", io.BytesIO(b"binary data"), "application/x-msdownload")}
+    resp_bad_ext = client.post(
+        f"/api/v1/customer/applications/{app_id}/documents",
+        files=files_bad_ext,
+        data={"document_type": "PAYSLIP"},
+        headers=headers,
+    )
+    assert resp_bad_ext.status_code == 400
+    assert "unsupported" in resp_bad_ext.json()["detail"].lower()
+
+    # 3. Invalid document type -> 400
+    files_valid = {"file": ("doc.pdf", io.BytesIO(b"%PDF-1.4 valid"), "application/pdf")}
+    resp_bad_type = client.post(
+        f"/api/v1/customer/applications/{app_id}/documents",
+        files=files_valid,
+        data={"document_type": "NOT_A_VALID_TYPE"},
+        headers=headers,
+    )
+    assert resp_bad_type.status_code == 400
+    assert "invalid document category" in resp_bad_type.json()["detail"].lower()
+
+    # 4. Empty file (0 bytes) -> 400
+    files_empty = {"file": ("empty.pdf", io.BytesIO(b""), "application/pdf")}
+    resp_empty = client.post(
+        f"/api/v1/customer/applications/{app_id}/documents",
+        files=files_empty,
+        data={"document_type": "PAYSLIP"},
+        headers=headers,
+    )
+    assert resp_empty.status_code == 400
+    assert "empty" in resp_empty.json()["detail"].lower()
+

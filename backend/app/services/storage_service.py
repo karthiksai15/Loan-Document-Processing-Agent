@@ -39,7 +39,7 @@ def save_document_file(
         )
         db.add(file_record)
     
-    db.commit()
+    db.flush()
 
     # 2. Cache on disk for local processing
     app_dir = os.path.join(settings.UPLOADS_DIR, application_id)

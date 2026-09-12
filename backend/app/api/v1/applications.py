@@ -105,11 +105,12 @@ def _enrich_application_response(db: Session, a) -> ApplicationResponse:
 
 @router.get("/dashboard/overview", response_model=DashboardOverviewResponse)
 def get_dashboard_overview_endpoint(
+    include_demo: bool = True,
     db: Session = Depends(get_db),
     current_officer=Depends(check_officer_permission),
 ):
     """Returns aggregated metrics and high-priority attention items for the loan officer dashboard."""
-    apps = application_service.list_applications(db)
+    apps = application_service.list_applications(db, include_demo=include_demo)
     enriched = [_enrich_application_response(db, a) for a in apps]
 
     total = len(enriched)

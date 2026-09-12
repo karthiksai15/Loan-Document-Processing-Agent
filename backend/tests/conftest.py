@@ -14,6 +14,16 @@ if any(keyword in db_url_str for keyword in disallowed_keywords):
         "Test execution has been terminated immediately to prevent data loss."
     )
 
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    if dbapi_connection.__class__.__module__.startswith("sqlite3"):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
 if not db_url_str.startswith("sqlite") and "test" not in db_url_str:
     raise RuntimeError(
         f"CRITICAL SAFETY ABORT: Tests must only execute against SQLite or an explicitly designated test database containing '_test' (got {engine.url})."
@@ -21,6 +31,7 @@ if not db_url_str.startswith("sqlite") and "test" not in db_url_str:
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
+
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     yield
