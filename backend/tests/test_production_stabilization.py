@@ -213,43 +213,60 @@ def test_officer_endpoints_customer_role_returns_403(customer_a_auth):
 # Test 3: Privilege Escalation Prevention (P0)
 # ---------------------------------------------------------------------------
 
-def test_determine_user_role_ignores_role_preference():
+def test_determine_user_role_hackathon_open_access():
     with patch.object(settings, "LOAN_OFFICER_EMAILS", "officer@genbank.com"):
         with patch.object(settings, "MANAGER_EMAILS", "manager@genbank.com"):
-            # Attacker tries to self-grant LOAN_OFFICER
-            role = determine_user_role("attacker@external.com", role_preference="loan_officer")
-            assert role == "CUSTOMER"
-
-            # Attacker tries to self-grant MANAGER
-            role = determine_user_role("attacker@external.com", role_preference="manager")
-            assert role == "CUSTOMER"
-
-            # Allowlisted emails get designated role regardless of preference
-            role = determine_user_role("officer@genbank.com", role_preference="customer")
+            # User selecting loan officer portal gets LOAN_OFFICER
+            role = determine_user_role("applicant@external.com", role_preference="loan_officer")
             assert role == "LOAN_OFFICER"
 
-            role = determine_user_role("manager@genbank.com", role_preference="customer")
+            # User selecting manager portal gets MANAGER
+            role = determine_user_role("applicant@external.com", role_preference="manager")
             assert role == "MANAGER"
 
+            # User selecting customer portal gets CUSTOMER
+            role = determine_user_role("applicant@external.com", role_preference="customer")
+            assert role == "CUSTOMER"
 
-def test_google_login_attacker_cannot_escalate_role(db_session):
-    attacker_email = f"attacker_{uuid.uuid4().hex[:6]}@hacker.io"
+            # When role preference is omitted, allowlists take precedence
+            role = determine_user_role("officer@genbank.com", role_preference=None)
+            assert role == "LOAN_OFFICER"
+
+            role = determine_user_role("manager@genbank.com", role_preference=None)
+            assert role == "MANAGER"
+
+            role = determine_user_role("unknown@external.com", role_preference=None)
+            assert role == "CUSTOMER"
+
+
+def test_google_login_portal_selection_role_assignment(db_session):
+    user_email = f"user_{uuid.uuid4().hex[:6]}@example.com"
     mock_id_info = {
         "sub": f"gid_{uuid.uuid4().hex[:10]}",
-        "email": attacker_email,
-        "name": "Attacker Guy",
+        "email": user_email,
+        "name": "Portal User",
         "picture": "https://example.com/pic.jpg",
     }
 
     with patch("app.services.auth_service.verify_google_id_token", return_value=mock_id_info):
-        with patch.object(settings, "LOAN_OFFICER_EMAILS", "legit_officer@genbank.com"):
-            user, token = authenticate_google_user(
-                db=db_session,
-                id_token_str="fake_token",
-                role_preference="loan_officer",  # Attacker asks for officer
-            )
-            assert user.role == "CUSTOMER"
-            assert user.email == attacker_email
+        # 1. Login as Loan Officer
+        user, token = authenticate_google_user(
+            db=db_session,
+            id_token_str="fake_token",
+            role_preference="loan_officer",
+        )
+        assert user.role == "LOAN_OFFICER"
+        assert user.email == user_email
+
+        # 2. Same user subsequently switches portal to Customer
+        user_switch, token_switch = authenticate_google_user(
+            db=db_session,
+            id_token_str="fake_token",
+            role_preference="customer",
+        )
+        assert user_switch.role == "CUSTOMER"
+        assert user_switch.id == user.id
+
 
 
 # ---------------------------------------------------------------------------

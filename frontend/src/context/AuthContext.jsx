@@ -98,6 +98,9 @@ export function AuthProvider({ children }) {
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.removeItem(TOKEN_STORAGE_KEY);
     }
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      window.sessionStorage.removeItem('genbank_selected_portal');
+    }
     setToken(null);
     setUser(null);
     setError(null);

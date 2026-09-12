@@ -115,53 +115,51 @@ def test_google_auth_new_officer_with_role_preference(mock_verify):
         "iss": "https://accounts.google.com"
     }
 
-    # 1. Allowlisted staff email receives LOAN_OFFICER role
-    with patch.object(settings, "LOAN_OFFICER_EMAILS", mock_email):
-        resp = client.post("/api/v1/auth/google", json={
-            "id_token": "mock-officer-token",
-            "role": "LOAN_OFFICER"
-        })
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["user"]["role"] == "LOAN_OFFICER"
-        assert data["user"]["email"] == mock_email
-
-    # 1b. Non-allowlisted email requesting LOAN_OFFICER is blocked from escalation and receives CUSTOMER
-    google_sub_unauth = f"google-sub-{uuid.uuid4().hex[:8]}"
-    unauth_email = f"unauth_{uuid.uuid4().hex[:6]}@gmail.com"
-    mock_verify.return_value = {
-        "sub": google_sub_unauth,
-        "email": unauth_email,
-        "name": "Unauth User",
-        "picture": "https://lh3.googleusercontent.com/a/unauth",
-        "email_verified": True,
-        "aud": settings.GOOGLE_CLIENT_ID,
-        "iss": "https://accounts.google.com"
-    }
-    resp_unauth = client.post("/api/v1/auth/google", json={
-        "id_token": "mock-unauth-token",
+    # 1. Any authenticated user selecting LOAN_OFFICER receives LOAN_OFFICER role without allowlist
+    resp = client.post("/api/v1/auth/google", json={
+        "id_token": "mock-officer-token",
         "role": "LOAN_OFFICER"
     })
-    assert resp_unauth.status_code == 200
-    assert resp_unauth.json()["user"]["role"] == "CUSTOMER"
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["user"]["role"] == "LOAN_OFFICER"
+    assert data["user"]["email"] == mock_email
 
-    # 2. Gmail user selecting CUSTOMER receives CUSTOMER role
-    google_sub_2 = f"google-sub-{uuid.uuid4().hex[:8]}"
-    mock_email_2 = f"borrower_{uuid.uuid4().hex[:6]}@gmail.com"
+    # 1b. Any authenticated user selecting CUSTOMER receives CUSTOMER role
+    google_sub_cust = f"google-sub-{uuid.uuid4().hex[:8]}"
+    cust_email = f"borrower_{uuid.uuid4().hex[:6]}@gmail.com"
     mock_verify.return_value = {
-        "sub": google_sub_2,
-        "email": mock_email_2,
+        "sub": google_sub_cust,
+        "email": cust_email,
         "name": "Customer Borrower",
+        "picture": "https://lh3.googleusercontent.com/a/cust",
         "email_verified": True,
         "aud": settings.GOOGLE_CLIENT_ID,
         "iss": "https://accounts.google.com"
     }
-    resp2 = client.post("/api/v1/auth/google", json={
+    resp_cust = client.post("/api/v1/auth/google", json={
         "id_token": "mock-customer-token",
         "role": "CUSTOMER"
     })
-    assert resp2.status_code == 200
-    assert resp2.json()["user"]["role"] == "CUSTOMER"
+    assert resp_cust.status_code == 200
+    assert resp_cust.json()["user"]["role"] == "CUSTOMER"
+
+    # 1c. When role preference is omitted, non-allowlisted email defaults to CUSTOMER
+    google_sub_def = f"google-sub-{uuid.uuid4().hex[:8]}"
+    def_email = f"default_{uuid.uuid4().hex[:6]}@gmail.com"
+    mock_verify.return_value = {
+        "sub": google_sub_def,
+        "email": def_email,
+        "name": "Default User",
+        "email_verified": True,
+        "aud": settings.GOOGLE_CLIENT_ID,
+        "iss": "https://accounts.google.com"
+    }
+    resp_def = client.post("/api/v1/auth/google", json={
+        "id_token": "mock-default-token"
+    })
+    assert resp_def.status_code == 200
+    assert resp_def.json()["user"]["role"] == "CUSTOMER"
 
 
 @patch("app.services.auth_service.google_id_token.verify_oauth2_token")

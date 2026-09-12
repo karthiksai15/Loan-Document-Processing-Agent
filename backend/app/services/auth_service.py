@@ -131,14 +131,25 @@ def decode_access_token(token: str) -> Dict[str, Any]:
 
 def determine_user_role(email: str, role_preference: Optional[str] = None) -> str:
     """
-    Determines user role strictly based on verified email allowlists.
+    Determines user role based on portal selection (hackathon open access)
+    or configured email allowlists.
     
-    1. If email is in MANAGER_EMAILS -> MANAGER
-    2. If email is in LOAN_OFFICER_EMAILS -> LOAN_OFFICER
-    3. All other users -> CUSTOMER
-    
-    The client-supplied role_preference is NEVER trusted to grant staff access.
+    1. If role_preference is explicitly requested:
+       - 'LOAN_OFFICER' / 'OFFICER' / 'STAFF' -> LOAN_OFFICER
+       - 'MANAGER' -> MANAGER
+       - 'CUSTOMER' / 'APPLICANT' -> CUSTOMER
+    2. If role_preference is omitted, check configured email allowlists.
+    3. Default to CUSTOMER.
     """
+    if role_preference:
+        pref = str(role_preference).strip().upper()
+        if pref in ("LOAN_OFFICER", "OFFICER", "STAFF"):
+            return "LOAN_OFFICER"
+        if pref == "MANAGER":
+            return "MANAGER"
+        if pref in ("CUSTOMER", "APPLICANT", "USER"):
+            return "CUSTOMER"
+
     email_clean = (email or "").strip().lower()
     raw_mgr = getattr(settings, "MANAGER_EMAILS", "")
     if isinstance(raw_mgr, (list, tuple, set)):
@@ -158,6 +169,7 @@ def determine_user_role(email: str, role_preference: Optional[str] = None) -> st
         return "LOAN_OFFICER"
 
     return "CUSTOMER"
+
 
 
 def authenticate_google_user(

@@ -86,6 +86,8 @@ export function App() {
             }
           >
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/officer" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/officer/dashboard" element={<Navigate to="/dashboard" replace />} />
             <Route path="/applications" element={<ApplicationsPage />} />
             <Route path="/applications/:applicationId" element={<ApplicationDetailPage />} />
             <Route path="/policies" element={<PoliciesPage />} />
