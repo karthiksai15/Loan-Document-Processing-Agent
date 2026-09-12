@@ -280,6 +280,23 @@ def get_agent_review(db: Session, application_id: str) -> Optional[dict]:
     return _model_to_response(obj) if obj else None
 
 
+def get_agent_reviews(db: Session, application_id: str) -> list:
+    """Get all agent review records for an application ordered newest first."""
+    app_obj = db.query(LoanApplicationModel).filter(
+        LoanApplicationModel.application_id == application_id
+    ).first()
+    if not app_obj:
+        raise ValueError(f"Application '{application_id}' not found.")
+
+    objs = (
+        db.query(AgentReviewModel)
+        .filter(AgentReviewModel.application_id == application_id)
+        .order_by(AgentReviewModel.created_at.desc())
+        .all()
+    )
+    return [_model_to_response(o) for o in objs]
+
+
 def get_agent_trace(db: Session, application_id: str) -> Optional[dict]:
     """Get the investigation trace for the most recent agent review."""
     review = get_agent_review(db, application_id)

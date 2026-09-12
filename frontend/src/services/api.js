@@ -79,8 +79,9 @@ export const api = {
 
   // AI Review Agent (LangGraph)
   runAgentReview: (appId, forceRebuild = false) =>
-    apiClient.post(`/applications/${appId}/agent/review`, { force_rebuild: forceRebuild }),
+    apiClient.post(`/applications/${appId}/agent/review`, { force_rebuild: forceRebuild }, { timeout: 180000 }),
   getAgentReview: (appId) => apiClient.get(`/applications/${appId}/agent/review`),
+  getAgentReviews: (appId) => apiClient.get(`/applications/${appId}/agent/reviews`),
   getAgentTrace: (appId) => apiClient.get(`/applications/${appId}/agent/trace`),
 
   // Confidence & Human Review Gate

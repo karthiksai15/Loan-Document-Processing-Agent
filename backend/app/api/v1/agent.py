@@ -115,3 +115,25 @@ def get_agent_trace_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Agent trace retrieval failed: {str(e)}"
         )
+
+
+@router.get(
+    "/{application_id}/agent/reviews",
+    response_model=list[AgentReviewResponse],
+    summary="Get All AI Agent Reviews (History)",
+    description="Retrieves all historical agent reviews for a loan application, newest first.",
+)
+def get_agent_reviews_endpoint(
+    application_id: str,
+    db: Session = Depends(get_db),
+):
+    """Returns all agent reviews for review history."""
+    try:
+        return agent_service.get_agent_reviews(db, application_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Agent review history retrieval failed: {str(e)}"
+        )

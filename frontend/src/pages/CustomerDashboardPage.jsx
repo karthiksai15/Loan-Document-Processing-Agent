@@ -29,10 +29,16 @@ export function getStatusBadge(status) {
       return { label: 'Approved', colorClass: 'badge-approved', icon: CheckCircle2 };
     case 'REJECTED':
       return { label: 'Rejected', colorClass: 'badge-rejected', icon: AlertCircle };
-    case 'SUBMITTED':
-      return { label: 'Submitted', colorClass: 'badge-submitted', icon: Clock };
+    case 'ESCALATED':
+      return { label: 'Escalated', colorClass: 'badge-rejected', icon: AlertCircle };
+    case 'ADDITIONAL_DOCUMENTS_REQUIRED':
+      return { label: 'Documents Requested', colorClass: 'badge-in-review', icon: AlertCircle };
+    case 'UNDER_REVIEW':
+      return { label: 'Under Review', colorClass: 'badge-in-review', icon: Clock };
     case 'IN_REVIEW':
       return { label: 'In Review', colorClass: 'badge-in-review', icon: Clock };
+    case 'SUBMITTED':
+      return { label: 'Submitted', colorClass: 'badge-submitted', icon: Clock };
     case 'DRAFT':
     default:
       return { label: 'Draft', colorClass: 'badge-draft', icon: UploadCloud };
@@ -66,8 +72,9 @@ export function CustomerDashboardPage() {
   }
 
   const draftsCount = applications.filter((a) => (a.status || '').toUpperCase() === 'DRAFT').length;
-  const submittedCount = applications.filter((a) => (a.status || '').toUpperCase() === 'SUBMITTED' || (a.status || '').toUpperCase() === 'IN_REVIEW').length;
+  const submittedCount = applications.filter((a) => ['SUBMITTED', 'IN_REVIEW', 'UNDER_REVIEW', 'ADDITIONAL_DOCUMENTS_REQUIRED'].includes((a.status || '').toUpperCase())).length;
   const approvedCount = applications.filter((a) => (a.status || '').toUpperCase() === 'APPROVED').length;
+  const docsRequiredList = applications.filter((a) => (a.status || '').toUpperCase() === 'ADDITIONAL_DOCUMENTS_REQUIRED');
 
   return (
     <div className="customer-dashboard">
@@ -92,6 +99,29 @@ export function CustomerDashboardPage() {
           <button type="button" onClick={fetchApplications} className="cust-retry-btn">
             Retry
           </button>
+        </div>
+      )}
+
+      {docsRequiredList.length > 0 && (
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '1rem 1.25rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <AlertCircle size={22} color="#d97706" style={{ flexShrink: 0 }} />
+            <div>
+              <div style={{ fontWeight: 700, color: '#92400e', fontSize: '0.925rem' }}>
+                Action Required: Additional Documents Requested
+              </div>
+              <div style={{ fontSize: '0.825rem', color: '#b45309', marginTop: '2px' }}>
+                Our credit officer requested additional documentation on application <strong>{docsRequiredList[0].application_number || docsRequiredList[0].application_id}</strong>.
+              </div>
+            </div>
+          </div>
+          <Link
+            to={`/customer/applications/${docsRequiredList[0].application_number || docsRequiredList[0].application_id}`}
+            className="cust-primary-btn"
+            style={{ fontSize: '0.825rem', padding: '0.45rem 1rem', textDecoration: 'none' }}
+          >
+            Upload Documents Now
+          </Link>
         </div>
       )}
 

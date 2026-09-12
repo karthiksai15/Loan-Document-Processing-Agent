@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
 
 
@@ -37,11 +37,19 @@ class CustomerApplicationResponse(BaseModel):
     income_annum: Optional[float] = None
     employer: Optional[str] = None
     loan_term: Optional[int] = None
+    date_of_birth: Optional[str] = None
+    address: Optional[str] = None
+    education: Optional[str] = None
+    self_employed: Optional[str] = None
     status: str
     created_at: datetime
     updated_at: datetime
     documents_count: int = 0
     documents: List[CustomerDocumentItem] = []
+    decision: Optional[str] = None
+    decision_reason: Optional[str] = None
+    requested_documents: Optional[List[Dict[str, Any]]] = None
+    reviewed_at: Optional[datetime] = None
 
 
 class CustomerApplicationListResponse(BaseModel):

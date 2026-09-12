@@ -57,6 +57,7 @@ export function StatusBadge({ status }) {
       break;
     case 'REQUIRED':
     case 'REJECTED':
+    case 'ESCALATED':
     case 'FAILED':
     case 'ERROR':
     case 'MISMATCH':
@@ -65,6 +66,8 @@ export function StatusBadge({ status }) {
       badgeClass = 'badge-high';
       break;
     case 'IN_REVIEW':
+    case 'UNDER_REVIEW':
+    case 'ADDITIONAL_DOCUMENTS_REQUIRED':
     case 'OVERRIDDEN':
     case 'WARNING':
     case 'PARTIAL':
@@ -74,6 +77,7 @@ export function StatusBadge({ status }) {
       break;
     case 'NOT_REQUIRED':
     case 'STANDARD_REVIEW':
+    case 'SUBMITTED':
     case 'INFO':
       badgeClass = 'badge-info';
       break;

@@ -13,11 +13,12 @@ from app.schemas.customer import (
     CustomerSubmitResponse,
 )
 from app.services import customer_service, document_service
+from app.services.cross_document_verification_service import get_application_profile_data
 
 router = APIRouter(prefix="/customer", tags=["Customer Portal"])
 
 
-def _to_customer_response(app_obj, docs) -> CustomerApplicationResponse:
+def _to_customer_response(db: Session, app_obj, docs) -> CustomerApplicationResponse:
     doc_items = [
         CustomerDocumentItem(
             document_id=d.document_id,
@@ -30,18 +31,44 @@ def _to_customer_response(app_obj, docs) -> CustomerApplicationResponse:
         for d in docs
         if d.processing_status != "DELETED"
     ]
+
+    # Load profile data for metadata (employer, education, etc.)
+    try:
+        profile = get_application_profile_data(db, app_obj.application_id)
+    except Exception:
+        profile = {}
+
+    # Check for latest human review record for decisions & requested documents
+    h_review = None
+    if getattr(app_obj, "human_reviews", None) and len(app_obj.human_reviews) > 0:
+        h_review = sorted(app_obj.human_reviews, key=lambda x: x.created_at or datetime.min, reverse=True)[0]
+
+    decision = h_review.human_decision if h_review else None
+    decision_reason = (h_review.decision_reason or h_review.override_reason) if h_review else None
+    requested_docs = h_review.requested_documents if h_review else None
+    reviewed_at = h_review.reviewed_at if h_review else None
+
     return CustomerApplicationResponse(
         application_id=app_obj.application_id,
         application_number=app_obj.application_number or app_obj.application_id,
-        applicant_name=app_obj.applicant_name,
-        loan_amount=app_obj.loan_amount,
-        income_annum=app_obj.income_annum,
-        employer=getattr(app_obj, "employer", None),
+        applicant_name=profile.get("applicant_name") or app_obj.applicant_name,
+        loan_amount=profile.get("loan_amount") or app_obj.loan_amount,
+        income_annum=profile.get("income_annum") or app_obj.income_annum,
+        employer=profile.get("employer") or getattr(app_obj, "employer", None),
+        loan_term=profile.get("loan_term") or getattr(app_obj, "loan_term", None),
+        date_of_birth=profile.get("date_of_birth"),
+        address=profile.get("address"),
+        education=profile.get("education"),
+        self_employed=profile.get("self_employed"),
         status=app_obj.status,
         created_at=app_obj.created_at,
         updated_at=app_obj.updated_at,
         documents_count=len(doc_items),
         documents=doc_items,
+        decision=decision,
+        decision_reason=decision_reason,
+        requested_documents=requested_docs,
+        reviewed_at=reviewed_at,
     )
 
 
@@ -58,7 +85,7 @@ def list_my_applications(
     responses = []
     for a in apps:
         docs = document_service.list_documents_for_application(db, a.application_id)
-        responses.append(_to_customer_response(a, docs))
+        responses.append(_to_customer_response(db, a, docs))
 
     return CustomerApplicationListResponse(
         total=len(responses),
@@ -83,7 +110,7 @@ def create_application(
         data=payload
     )
     docs = document_service.list_documents_for_application(db, app_obj.application_id)
-    return _to_customer_response(app_obj, docs)
+    return _to_customer_response(db, app_obj, docs)
 
 
 @router.get(
@@ -98,7 +125,7 @@ def get_my_application(
 ):
     app_obj = customer_service.get_customer_application(db, current_user.id, application_id)
     docs = document_service.list_documents_for_application(db, app_obj.application_id)
-    return _to_customer_response(app_obj, docs)
+    return _to_customer_response(db, app_obj, docs)
 
 
 @router.post(

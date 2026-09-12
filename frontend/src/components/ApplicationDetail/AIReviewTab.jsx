@@ -17,12 +17,31 @@ import { ErrorAlert } from '../Common/ErrorAlert';
 export function AIReviewTab({ applicationId, agentReview, onRefresh }) {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState(null);
+  const [allReviews, setAllReviews] = useState([]);
+  const [selectedReviewIdx, setSelectedReviewIdx] = useState(0);
+
+  const fetchReviewsHistory = async () => {
+    try {
+      const res = await api.getAgentReviews(applicationId);
+      if (Array.isArray(res)) {
+        setAllReviews(res);
+      }
+    } catch {
+      // Non-critical fallback
+    }
+  };
+
+  React.useEffect(() => {
+    fetchReviewsHistory();
+  }, [applicationId, agentReview]);
 
   const handleRunReview = async (force = true) => {
     try {
       setRunning(true);
       setError(null);
       await api.runAgentReview(applicationId, force);
+      await fetchReviewsHistory();
+      setSelectedReviewIdx(0);
       if (onRefresh) onRefresh();
     } catch (err) {
       setError(err.message);
@@ -31,7 +50,9 @@ export function AIReviewTab({ applicationId, agentReview, onRefresh }) {
     }
   };
 
-  if (!agentReview) {
+  const currentAgentReview = (allReviews.length > 0 && allReviews[selectedReviewIdx]) || agentReview;
+
+  if (!currentAgentReview && !running) {
     return (
       <div className="card" style={{ padding: '2.5rem 1.5rem', textAlign: 'center' }}>
         <Bot size={40} color="var(--color-primary-600)" style={{ margin: '0 auto 1rem' }} />
@@ -42,25 +63,29 @@ export function AIReviewTab({ applicationId, agentReview, onRefresh }) {
           Launch the Decision Support AI Loan Review Agent. The agent iteratively investigates the application, cross-checks evidence against bank and regulatory policies, and compiles an explainable report for officer review.
         </p>
         {error && <ErrorAlert message={error} />}
-        {running ? (
-          <LoadingState message="Running AI investigation workflow..." />
-        ) : (
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => handleRunReview(true)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-          >
-            <Play size={16} />
-            <span>Launch AI Agent Investigation</span>
-          </button>
-        )}
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => handleRunReview(true)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          <Play size={16} />
+          <span>Launch AI Agent Investigation</span>
+        </button>
       </div>
     );
   }
 
-  const review = agentReview.final_review || {};
-  const steps = agentReview.investigation_steps || [];
+  if (running && !currentAgentReview) {
+    return (
+      <div className="card" style={{ padding: '2.5rem 1.5rem', textAlign: 'center' }}>
+        <LoadingState message="Executing autonomous AI investigation workflow... Checking evidence and policy grounding." />
+      </div>
+    );
+  }
+
+  const review = currentAgentReview?.final_review || {};
+  const steps = currentAgentReview?.investigation_steps || [];
   const recommendation = review.recommended_next_step || 'OFFICER_INVESTIGATION';
 
   return (
@@ -93,16 +118,26 @@ export function AIReviewTab({ applicationId, agentReview, onRefresh }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
+                Status
+              </div>
+              <span className={`badge ${running ? 'badge-medium' : 'badge-low'}`}>
+                <span className="badge-dot" />
+                <span>{running ? 'PROCESSING' : (currentAgentReview?.investigation_status || 'COMPLETED')}</span>
+              </span>
+            </div>
+
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
                 AI Confidence
               </div>
-              <ConfidenceBadge level={review.confidence_level || agentReview.confidence_level} score={review.confidence ?? agentReview.confidence} />
+              <ConfidenceBadge level={review.confidence_level || currentAgentReview?.confidence_level} score={review.confidence ?? currentAgentReview?.confidence} />
             </div>
 
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
                 Grounding Status
               </div>
-              <StatusBadge status={agentReview.grounding_status || 'GROUNDED'} />
+              <StatusBadge status={currentAgentReview?.grounding_status || 'GROUNDED'} />
             </div>
 
             <button
@@ -117,6 +152,28 @@ export function AIReviewTab({ applicationId, agentReview, onRefresh }) {
             </button>
           </div>
         </div>
+
+        {/* Multi-run iteration selector */}
+        {allReviews.length > 1 && (
+          <div style={{ marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+              Investigation History ({allReviews.length} runs):
+            </span>
+            <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+              {allReviews.map((r, idx) => (
+                <button
+                  key={r.agent_review_id || idx}
+                  type="button"
+                  className={`btn btn-xs ${selectedReviewIdx === idx ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setSelectedReviewIdx(idx)}
+                  style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem', borderRadius: 'var(--radius-full)' }}
+                >
+                  Run #{allReviews.length - idx} {idx === 0 ? '(Latest)' : ''}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {error && <ErrorAlert message={error} />}

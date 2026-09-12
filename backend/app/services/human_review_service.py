@@ -80,6 +80,14 @@ def is_decision_override(ai_recommendation: str, human_decision: str) -> bool:
     Determines if human decision deviates from AI recommendation.
     - If ai_recommendation == human_decision: aligned (False)
     - If ai_recommendation == 'STANDARD_REVIEW' and human_decision == 'APPROVED': aligned (False)
+    - If ai_recommendation == 'ESCALATE' and human_decision in ('ESCALATE', 'ESCALATED', 'ESCALATE_TO_SENIOR'): aligned (False)
+    - If ai_recommendation in ('OFFICER_INVESTIGATION', 'DOCUMENT_FOLLOWUP') and human_decision in (
+        'OFFICER_INVESTIGATION',
+        'SCHEDULE_INTERVIEW',
+        'REQUEST_ADDITIONAL_DOCUMENTS',
+        'DOCUMENT_FOLLOWUP',
+    ):
+        return False
     - In all other cases: override (True)
     """
     ai = (ai_recommendation or "").upper().strip()
@@ -87,6 +95,15 @@ def is_decision_override(ai_recommendation: str, human_decision: str) -> bool:
     if ai == dec:
         return False
     if ai == "STANDARD_REVIEW" and dec == "APPROVED":
+        return False
+    if ai == "ESCALATE" and dec in ("ESCALATE", "ESCALATED", "ESCALATE_TO_SENIOR"):
+        return False
+    if ai in ("OFFICER_INVESTIGATION", "DOCUMENT_FOLLOWUP") and dec in (
+        "OFFICER_INVESTIGATION",
+        "SCHEDULE_INTERVIEW",
+        "REQUEST_ADDITIONAL_DOCUMENTS",
+        "DOCUMENT_FOLLOWUP",
+    ):
         return False
     return True
 
@@ -355,6 +372,15 @@ def acknowledge_review(
         record.reviewed_by = officer_id
         record.updated_at = datetime.utcnow()
 
+        # Synchronize LoanApplicationModel status
+        app_obj = db.query(LoanApplicationModel).filter(
+            (LoanApplicationModel.application_id == application_id) |
+            (LoanApplicationModel.application_number == application_id)
+        ).first()
+        if app_obj and app_obj.status in ("SUBMITTED", "PENDING"):
+            app_obj.status = "UNDER_REVIEW"
+            app_obj.updated_at = datetime.utcnow()
+
         log_audit_event(
             db=db,
             application_id=application_id,
@@ -447,6 +473,15 @@ def request_documents(
 
     record.updated_at = datetime.utcnow()
 
+    # Synchronize LoanApplicationModel status
+    app_obj = db.query(LoanApplicationModel).filter(
+        (LoanApplicationModel.application_id == application_id) |
+        (LoanApplicationModel.application_number == application_id)
+    ).first()
+    if app_obj:
+        app_obj.status = "ADDITIONAL_DOCUMENTS_REQUIRED"
+        app_obj.updated_at = datetime.utcnow()
+
     log_audit_event(
         db=db,
         application_id=application_id,
@@ -498,7 +533,7 @@ def record_human_decision(
                 "Override reason is mandatory; decision reason is required when human decision deviates from AI recommendation."
             )
         new_status = "OVERRIDDEN"
-        effective_reason = clean_override_reason
+        effective_reason = (decision_reason or override_reason or "").strip()
     else:
         new_status = "COMPLETED"
         effective_reason = (decision_reason or override_reason or "").strip()
@@ -525,6 +560,20 @@ def record_human_decision(
     record.reviewed_by = officer_id
     record.reviewed_at = datetime.utcnow()
     record.updated_at = datetime.utcnow()
+
+    # Synchronize LoanApplicationModel status
+    app_obj = db.query(LoanApplicationModel).filter(
+        (LoanApplicationModel.application_id == application_id) |
+        (LoanApplicationModel.application_number == application_id)
+    ).first()
+    if app_obj:
+        if dec_clean in ("APPROVED", "REJECTED", "ESCALATED"):
+            app_obj.status = dec_clean
+        elif dec_clean in ("OFFICER_INVESTIGATION", "SCHEDULE_INTERVIEW"):
+            app_obj.status = "UNDER_REVIEW"
+        elif dec_clean in ("REQUEST_ADDITIONAL_DOCUMENTS", "DOCUMENT_FOLLOWUP"):
+            app_obj.status = "ADDITIONAL_DOCUMENTS_REQUIRED"
+        app_obj.updated_at = datetime.utcnow()
 
     # Log Override Audit if applicable
     if override:

@@ -173,14 +173,14 @@ def upload_customer_document(
     content_type: Optional[str] = None
 ) -> DocumentModel:
     """
-    Uploads a document to the customer's draft application after verifying ownership.
+    Uploads a document to the customer's draft or additional-documents-required application after verifying ownership.
     """
     app_obj = get_customer_application(db, user_id, application_id)
 
-    if app_obj.status not in ["DRAFT", "PENDING"]:
+    if app_obj.status not in ["DRAFT", "PENDING", "ADDITIONAL_DOCUMENTS_REQUIRED"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot upload documents to application in '{app_obj.status}' status. Application is already submitted."
+            detail=f"Cannot upload documents to application in '{app_obj.status}' status. Application is locked for review."
         )
 
     doc_obj = document_service.upload_document(
@@ -193,8 +193,17 @@ def upload_customer_document(
         uploaded_by=user_id,
     )
 
-    app_obj.updated_at = datetime.utcnow()
-    db.commit()
+    if app_obj.status == "ADDITIONAL_DOCUMENTS_REQUIRED":
+        app_obj.status = "UNDER_REVIEW"
+        app_obj.updated_at = datetime.utcnow()
+        db.commit()
+        try:
+            run_application_processing_pipeline(db, app_obj.application_id)
+        except Exception as e:
+            logger.warning(f"Error re-running pipeline on document re-upload for {application_id}: {e}")
+    else:
+        app_obj.updated_at = datetime.utcnow()
+        db.commit()
 
     return doc_obj
 

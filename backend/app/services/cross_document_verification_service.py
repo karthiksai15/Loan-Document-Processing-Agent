@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.core.logging import logger
 from app.db.models import (
     LoanApplicationModel,
+    ApplicantModel,
     DocumentModel,
     ExtractedFieldModel,
     ApplicationVerificationModel,
@@ -118,6 +119,45 @@ def get_application_profile_data(db: Session, application_id: str) -> Dict[str, 
                 profile_data["bank_asset_value"] = float(r["bank_asset_value"]) if pd.notna(r["bank_asset_value"]) else None
         except Exception as e:
             logger.warning(f"Error loading applicant_profiles.csv for '{application_id}': {e}")
+
+    # Check database ApplicantModel for customer created applications
+    applicant_rec = db.query(ApplicantModel).filter(
+        (ApplicantModel.applicant_id == application_id) |
+        (ApplicantModel.applicant_id == target_id)
+    ).first()
+    if applicant_rec:
+        if applicant_rec.applicant_name:
+            profile_data["applicant_name"] = applicant_rec.applicant_name
+        if applicant_rec.income_annum is not None and applicant_rec.income_annum > 0:
+            profile_data["income_annum"] = applicant_rec.income_annum
+        if applicant_rec.loan_amount is not None and applicant_rec.loan_amount > 0:
+            profile_data["loan_amount"] = applicant_rec.loan_amount
+        if applicant_rec.loan_term is not None:
+            profile_data["loan_term"] = applicant_rec.loan_term
+        if applicant_rec.cibil_score is not None:
+            profile_data["cibil_score"] = applicant_rec.cibil_score
+        if applicant_rec.employer:
+            profile_data["employer"] = applicant_rec.employer
+        if applicant_rec.address:
+            profile_data["address"] = applicant_rec.address
+        if applicant_rec.dummy_kyc_id:
+            profile_data["dummy_kyc_id"] = applicant_rec.dummy_kyc_id
+        if applicant_rec.no_of_dependents is not None:
+            profile_data["no_of_dependents"] = applicant_rec.no_of_dependents
+        if applicant_rec.education:
+            profile_data["education"] = applicant_rec.education
+        if applicant_rec.self_employed:
+            profile_data["self_employed"] = applicant_rec.self_employed
+        if applicant_rec.residential_assets_value is not None:
+            profile_data["residential_assets_value"] = applicant_rec.residential_assets_value
+        if applicant_rec.commercial_assets_value is not None:
+            profile_data["commercial_assets_value"] = applicant_rec.commercial_assets_value
+        if applicant_rec.luxury_assets_value is not None:
+            profile_data["luxury_assets_value"] = applicant_rec.luxury_assets_value
+        if applicant_rec.bank_asset_value is not None:
+            profile_data["bank_asset_value"] = applicant_rec.bank_asset_value
+        if applicant_rec.scenario:
+            profile_data["scenario"] = applicant_rec.scenario
 
     return profile_data
 

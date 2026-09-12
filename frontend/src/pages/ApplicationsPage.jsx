@@ -96,12 +96,15 @@ export function ApplicationsPage() {
     if (viewScope === 'CUSTOMER' && isDemo) return false;
 
     if (currentFilter === 'REQUIRED') {
-      if (app.human_review_status !== 'REQUIRED' && app.human_review_required !== true) return false;
+      if (['APPROVED', 'REJECTED'].includes((app.status || '').toUpperCase())) return false;
+      if (app.human_review_status !== 'REQUIRED' && app.human_review_required !== true && !['SUBMITTED', 'UNDER_REVIEW', 'ADDITIONAL_DOCUMENTS_REQUIRED'].includes(app.status)) return false;
     } else if (currentFilter === 'MISSING_DOCS') {
       const issue = getAppIssue(app).toLowerCase();
-      if (!issue.includes('missing') && !issue.includes('document')) return false;
+      const isReqDocs = (app.status || '').toUpperCase() === 'ADDITIONAL_DOCUMENTS_REQUIRED';
+      if (!isReqDocs && !issue.includes('missing') && !issue.includes('document')) return false;
     } else if (currentFilter === 'COMPLETED') {
-      if (!['COMPLETED', 'OVERRIDDEN', 'APPROVED', 'REJECTED'].includes(app.human_review_status)) return false;
+      const isDone = ['COMPLETED', 'OVERRIDDEN', 'APPROVED', 'REJECTED'].includes(app.human_review_status) || ['APPROVED', 'REJECTED'].includes((app.status || '').toUpperCase());
+      if (!isDone) return false;
     }
 
     // Search query
@@ -282,7 +285,13 @@ export function ApplicationsPage() {
                     <RiskBadge level={app.ml_risk_level} score={app.ml_risk_score} />
                   </td>
                   <td>
-                    <StatusBadge status={app.human_review_status || 'REQUIRED'} />
+                    <StatusBadge
+                      status={
+                        ['APPROVED', 'REJECTED', 'ESCALATED', 'ADDITIONAL_DOCUMENTS_REQUIRED'].includes((app.status || '').toUpperCase())
+                          ? app.status
+                          : (app.human_review_status || app.status || 'REQUIRED')
+                      }
+                    />
                   </td>
                   <td style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
                     {getAppIssue(app)}

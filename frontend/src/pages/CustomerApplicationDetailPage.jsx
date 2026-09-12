@@ -79,7 +79,12 @@ export function CustomerApplicationDetailPage() {
 
     try {
       await api.uploadCustomerDocument(applicationId, file, documentType);
-      setActionSuccess(`Successfully uploaded ${file.name}`);
+      const isReq = (application?.status || '').toUpperCase() === 'ADDITIONAL_DOCUMENTS_REQUIRED';
+      setActionSuccess(
+        isReq
+          ? `Successfully uploaded ${file.name}! Application has resumed underwriting review.`
+          : `Successfully uploaded ${file.name}`
+      );
       await fetchApplicationDetails();
     } catch (err) {
       setError(err?.message || `Failed to upload document for ${documentType}.`);
@@ -149,7 +154,13 @@ export function CustomerApplicationDetailPage() {
     );
   }
 
-  const isDraft = (application.status || '').toUpperCase() === 'DRAFT';
+  const statusUpper = (application.status || '').toUpperCase();
+  const isDraft = statusUpper === 'DRAFT';
+  const isDocsRequired = statusUpper === 'ADDITIONAL_DOCUMENTS_REQUIRED';
+  const isApproved = statusUpper === 'APPROVED';
+  const isRejected = statusUpper === 'REJECTED';
+  const isEscalated = statusUpper === 'ESCALATED';
+  const canUpload = isDraft || isDocsRequired;
   const badge = getStatusBadge(application.status);
   const StatusIcon = badge.icon;
   const docsList = application.documents || [];
@@ -259,11 +270,11 @@ export function CustomerApplicationDetailPage() {
           {/* Step 3: Submission & Review */}
           <div
             className={`stepper-step ${
-              !isDraft ? (application.status === 'APPROVED' ? 'completed' : 'active') : ''
+              !isDraft ? (isApproved ? 'completed' : 'active') : ''
             }`}
           >
             <div className="step-indicator">
-              {application.status === 'APPROVED' ? (
+              {isApproved ? (
                 <CheckCircle2 size={18} />
               ) : !isDraft ? (
                 <Clock size={16} />
@@ -276,8 +287,10 @@ export function CustomerApplicationDetailPage() {
               <span className="step-desc">
                 {isDraft
                   ? 'Awaiting submission'
-                  : application.status === 'APPROVED'
+                  : isApproved
                   ? 'Underwriting completed'
+                  : isDocsRequired
+                  ? 'Documents requested'
                   : 'AI & Officer in review'}
               </span>
             </div>
@@ -285,24 +298,20 @@ export function CustomerApplicationDetailPage() {
 
           <div
             className={`stepper-line ${
-              application.status === 'APPROVED' || application.status === 'REJECTED'
-                ? 'completed'
-                : ''
+              isApproved || isRejected || isEscalated ? 'completed' : ''
             }`}
           />
 
           {/* Step 4: Decision */}
           <div
             className={`stepper-step ${
-              application.status === 'APPROVED' || application.status === 'REJECTED'
-                ? 'completed'
-                : ''
+              isApproved || isRejected || isEscalated ? 'completed' : ''
             }`}
           >
             <div className="step-indicator">
-              {application.status === 'APPROVED' ? (
+              {isApproved ? (
                 <CheckCircle2 size={18} />
-              ) : application.status === 'REJECTED' ? (
+              ) : isRejected || isEscalated ? (
                 <AlertCircle size={18} />
               ) : (
                 4
@@ -311,10 +320,12 @@ export function CustomerApplicationDetailPage() {
             <div className="step-content">
               <span className="step-title">4. Decision</span>
               <span className="step-desc">
-                {application.status === 'APPROVED'
+                {isApproved
                   ? 'Approved'
-                  : application.status === 'REJECTED'
+                  : isRejected
                   ? 'Declined'
+                  : isEscalated
+                  ? 'Escalated'
                   : 'Pending final review'}
               </span>
             </div>
@@ -322,16 +333,84 @@ export function CustomerApplicationDetailPage() {
         </div>
       </div>
 
-      {/* Post-submission Informative Banner */}
-      {!isDraft && (
+      {/* Action Required: Requested Documents */}
+      {isDocsRequired && (
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '1.25rem 1.5rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
+            <AlertCircle size={24} color="#d97706" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <div style={{ flex: 1 }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#92400e', marginBottom: '0.35rem' }}>
+                Action Required: Additional Documentation Requested
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: '#b45309', marginBottom: '0.75rem' }}>
+                Our credit officer has requested clarification or missing documents. Please upload the requested file(s) below. Once uploaded, your file will immediately re-enter automated review.
+              </p>
+              {application.requested_documents && application.requested_documents.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {application.requested_documents.map((req, idx) => (
+                    <div key={idx} style={{ background: '#ffffff', border: '1px solid #fcd34d', borderRadius: '8px', padding: '0.75rem 1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontWeight: 700, color: '#92400e', fontSize: '0.875rem' }}>{req.doc_type}</span>
+                        {req.requested_by && <span style={{ fontSize: '0.75rem', color: '#78350f' }}>Requested by: {req.requested_by}</span>}
+                      </div>
+                      <p style={{ fontSize: '0.825rem', color: '#451a03', marginTop: '0.25rem' }}>{req.reason}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Decision: Approved */}
+      {isApproved && (
+        <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '12px', padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <CheckCircle2 size={32} color="#16a34a" style={{ flexShrink: 0 }} />
+          <div>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#166534' }}>Loan Application Approved</h3>
+            <p style={{ fontSize: '0.875rem', color: '#15803d', marginTop: '0.25rem' }}>
+              {application.decision_reason || 'Congratulations! Your loan application has been approved by GenBank underwriting.'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Decision: Rejected */}
+      {isRejected && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '12px', padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <AlertCircle size={32} color="#dc2626" style={{ flexShrink: 0 }} />
+          <div>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#991b1b' }}>Loan Application Declined</h3>
+            <p style={{ fontSize: '0.875rem', color: '#b91c1c', marginTop: '0.25rem' }}>
+              {application.decision_reason || 'Underwriting criteria were not met for this loan request.'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Decision: Escalated */}
+      {isEscalated && (
+        <div style={{ background: '#faf5ff', border: '1px solid #d8b4fe', borderRadius: '12px', padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <AlertCircle size={32} color="#9333ea" style={{ flexShrink: 0 }} />
+          <div>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#6b21a8' }}>Underwriting Escalation in Progress</h3>
+            <p style={{ fontSize: '0.875rem', color: '#7e22ce', marginTop: '0.25rem' }}>
+              Your application has been escalated to senior risk underwriting for comprehensive review.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Post-submission Informative Banner (Standard) */}
+      {!isDraft && !isDocsRequired && !isApproved && !isRejected && !isEscalated && (
         <div className="cust-info-card">
           <ShieldCheck size={24} color="#2563eb" />
           <div className="cust-info-text">
-            <h3 className="cust-info-title">Application Submitted Successfully</h3>
+            <h3 className="cust-info-title">Application Under Active Underwriting</h3>
             <p className="cust-info-desc">
-              Your application has been received and entered our autonomous underwriting pipeline.
-              GenBank AI verification checks cross-document consistency, and our loan officers are
-              reviewing your file.
+              Your application is currently undergoing autonomous verification and credit officer assessment.
+              Any document follow-ups will be communicated directly in this workspace.
             </p>
           </div>
         </div>
@@ -345,6 +424,8 @@ export function CustomerApplicationDetailPage() {
             <p className="cust-docs-subtitle">
               {isDraft
                 ? 'Upload all mandatory documents to complete underwriting requirements. Accepted formats: PDF, PNG, JPG (up to 10MB).'
+                : isDocsRequired
+                ? 'Please upload the requested documents below. Once uploaded, your application will re-enter underwriting.'
                 : 'Documents attached to this loan file. Document modification is locked post-submission.'}
             </p>
           </div>
@@ -421,8 +502,33 @@ export function CustomerApplicationDetailPage() {
                         <span>Remove</span>
                       </button>
                     )}
+
+                    {isDocsRequired && (
+                      <div style={{ marginLeft: 'auto' }}>
+                        <input
+                          type="file"
+                          ref={(el) => (fileInputRefs.current[req.type] = el)}
+                          style={{ display: 'none' }}
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          onChange={(e) => {
+                            if (e.target.files?.[0]) {
+                              handleFileUpload(req.type, e.target.files[0]);
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          disabled={isUploadingThis}
+                          onClick={() => fileInputRefs.current[req.type]?.click()}
+                          className="btn btn-secondary btn-sm"
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                        >
+                          {isUploadingThis ? 'Uploading...' : 'Replace'}
+                        </button>
+                      </div>
+                    )}
                   </div>
-                ) : isDraft ? (
+                ) : canUpload ? (
                   <div className="slot-upload-action">
                     <input
                       type="file"
@@ -449,7 +555,7 @@ export function CustomerApplicationDetailPage() {
                       ) : (
                         <>
                           <UploadCloud size={14} />
-                          <span>Select Document File</span>
+                          <span>{isDocsRequired ? 'Upload Requested Document' : 'Select Document File'}</span>
                         </>
                       )}
                     </button>
